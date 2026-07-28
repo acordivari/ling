@@ -24,8 +24,9 @@ modules; microphone capture additionally requires `localhost` or HTTPS.
 
 This is the important part.
 
-- **Not WhAM.** The model is never loaded. Running it needs CUDA and the Zenodo
-  weights.
+- **Not WhAM.** The model is never loaded. Running it needs the Python pipeline
+  and the Zenodo weights — see [`INSTALL.md`](../INSTALL.md). It does *not* need
+  CUDA: WhAM runs on Apple Silicon via MPS, and on CPU.
 - **Not Fréchet Audio Distance.** FAD needs the Python pipeline
   (`wham/generation/eval/`). The distances here are DTW over inter-click
   intervals and cosine over mel spectra — cheap, interpretable, and unrelated

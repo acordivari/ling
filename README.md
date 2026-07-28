@@ -62,10 +62,13 @@ alongside if you need the Python pipeline:
 git clone https://github.com/Project-CETI/wham.git
 ```
 
-Then follow its README: conda with Python 3.9, `pip install -e .`,
-`pip install -e ./vampnet`, `madmom` with `--no-build-isolation`, ffmpeg from
-conda-forge, and weights from
+Then follow its README: Python 3.9, `pip install -e .`, `pip install -e
+./vampnet`, `madmom` with `--no-build-isolation`, ffmpeg, and weights from
 [Zenodo](https://doi.org/10.5281/zenodo.17633708) extracted to `vampnet/models/`.
+
+On Apple Silicon, read [`INSTALL.md`](INSTALL.md) first — the pipeline runs fine
+on MPS and CPU without CUDA, but there is a Rosetta trap in the default `PATH`
+and a LibreSSL conflict that breaks `fadtk`.
 
 The `explorer/` tool needs none of that.
 
