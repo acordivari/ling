@@ -8,16 +8,22 @@ GPU; neither is required.
 
 ## Headline
 
-WhAM does not need CUDA. A 40.5M-parameter VampNet forward pass runs on both CPU
-and MPS with no unimplemented-op fallbacks:
+WhAM does not need CUDA. The full pipeline — load real weights, encode audio to
+tokens, run masked generation, decode back to audio — completes on both MPS and
+CPU with no unimplemented-op fallbacks. Encoding a 3s synthetic click train,
+vamping at 80% mask with 12 sampling steps, then coarse-to-fine:
 
-```
-cpu  OK  params=40.5M  out=(1, 1024, 1683)  fwd=0.15s
-mps  OK  params=40.5M  out=(1, 1024, 1683)  fwd=1.08s
-```
+| stage | MPS | CPU |
+|---|---|---|
+| encode | 0.72s | 0.77s |
+| coarse_vamp + coarse_to_fine | **2.71s** | **5.98s** |
+| decode | 0.43s | 1.05s |
 
-Those timings are single cold calls — the MPS number includes kernel
-compilation. They are evidence of *execution*, not a benchmark.
+Output was finite and non-degenerate in both cases. These are warm single runs on
+one short clip, not a benchmark — but MPS is roughly 2× CPU on the sampling loop,
+which is the part that dominates.
+
+Loading `coarse` + `c2f` + `codec` onto MPS takes about 4.4s.
 
 The relevant code paths were already device-agnostic upstream:
 `Interface.__init__` defaults to `device="cpu"` (`vampnet/vampnet/interface.py:62`),
@@ -131,22 +137,71 @@ Two options:
   upstream README's "use conda" instruction is doing real work rather than
   being habit.
 
+### 6. `torch.load` refuses the wavebeat checkpoint
+
+torch 2.6 flipped `weights_only` to `True` by default. `wavebeat.pth` is a
+Lightning checkpoint carrying a `ModelCheckpoint` callback object, so loading it
+raises:
+
+```
+_pickle.UnpicklingError: Weights only load failed.
+WeightsUnpickler error: Unsupported global: GLOBAL
+pytorch_lightning.callbacks.model_checkpoint.ModelCheckpoint
+```
+
+Not a platform issue — any torch ≥2.6 hits it. It affects **only** the beat
+tracker. `coarse.pth`, `c2f.pth` and `codec.pth` all load clean, so passing
+`wavebeat_ckpt=None` sidesteps it entirely and generation works without it.
+
+Note that `vampnet/conf/interface.yml` *does* set `Interface.wavebeat_ckpt`, so
+anything driven off that config — including `vampnet/app.py` — will hit this.
+
+If you want the beat tracker, force the old behaviour before constructing the
+Interface. Only reasonable because these weights came from CETI's own Zenodo
+record; `weights_only=False` executes pickled code:
+
+```python
+import torch
+_orig = torch.load
+torch.load = lambda *a, **k: _orig(*a, **{**k, 'weights_only': False})
+```
+
+Verified working — `wavebeat.pth` then loads as `dsTCNModel`.
+
+### 7. `AudioSignal.write` doesn't move off-device first
+
+audiotools calls `.numpy()` on the tensor without a `.cpu()` hop, so writing a
+generated signal from MPS dies with:
+
+```
+TypeError: can't convert mps:0 device type tensor to numpy.
+```
+
+Fix at the call site: `signal.cpu().write(path)`.
+
 ## Verifying
 
+Weights load, from the `vampnet/` directory:
+
 ```bash
-.venv/bin/python -c "
-import warnings; warnings.filterwarnings('ignore')
-import torch
-from vampnet.modules.transformer import VampNet
-m = VampNet(flash_attn=False).to('mps').eval()
-z = torch.rand(1, m.latent_dim*m.n_codebooks, 187).to('mps')
-with torch.no_grad(): print('ok', tuple(m(z).shape))
+../.venv/bin/python -c "
+import warnings, logging; warnings.filterwarnings('ignore'); logging.disable(logging.INFO)
+from vampnet.interface import Interface
+i = Interface(coarse_ckpt='./models/coarse.pth', coarse2fine_ckpt='./models/c2f.pth',
+              codec_ckpt='./models/codec.pth', wavebeat_ckpt=None, device='mps')
+print('ok', type(i.coarse).__name__, type(i.c2f).__name__, type(i.codec).__name__)
 "
 ```
+
+Expected: `ok VampNet VampNet LAC`.
 
 Import surface confirmed working: `vampnet`, `vampnet.interface`,
 `vampnet.modules.transformer`, `audiotools`, `lac`, `wavebeat`, `argbind`,
 `madmom`, `gradio`, and `fadtk` (under the urllib3 downgrade).
+
+Generation path confirmed working: `Interface.encode` → `coarse_vamp` →
+`coarse_to_fine` → `to_signal`, on both `mps` and `cpu`, producing finite
+non-silent audio.
 
 ## Known-imperfect state
 
@@ -159,11 +214,23 @@ Import surface confirmed working: `vampnet`, `vampnet.interface`,
 
 ## Not yet verified
 
-Everything above establishes that the environment imports and that the
-architecture executes. It does **not** establish that generation is numerically
-correct on MPS — that needs the weights loaded and output audited by ear. MPS
-and CUDA are not bit-identical, and this model was only ever validated on CUDA
-upstream. Audit generations before trusting them, and log the checkpoint.
+Everything above establishes that the pipeline *runs* end to end and emits
+finite, non-silent audio. It does **not** establish that the output is
+perceptually correct. Nobody has listened to it yet, and there is no reference
+CUDA generation to compare against.
+
+That gap matters here. MPS and CUDA are not bit-identical, this model was only
+ever validated on CUDA upstream, and the repo's own README warns that generation
+quality needs manual auditing across checkpoints rather than trusting `latest`.
+Before any result gets reported from a local generation:
+
+- listen to the output;
+- ideally generate the same prompt with the same seed on `cpu` and on `mps` and
+  confirm they are perceptually equivalent — a silent MPS numerical divergence
+  would otherwise look like a finding;
+- log the checkpoint, per the repo conventions.
+
+`fadtk` also imports but has not been run on real data.
 
 ## Licensing
 
