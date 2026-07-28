@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>WhAM Explorer — coda / rhythm / click comparison</title>
+<link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+
+<header class="topbar">
+  <div class="brand">
+    <h1>WhAM Explorer</h1>
+    <p class="sub">Sperm whale coda structure against rhythm, click-language, and animal sources</p>
+  </div>
+  <div class="settings">
+    <label>onset sensitivity
+      <input type="range" id="sensitivity" min="0" max="1" step="0.01" value="0.6">
+      <output id="sensitivityOut">0.60</output>
+    </label>
+    <label>min interval
+      <input type="range" id="minIci" min="0.005" max="0.2" step="0.005" value="0.03">
+      <output id="minIciOut">30 ms</output>
+    </label>
+  </div>
+</header>
+
+<div class="provenance" id="provenance">
+  <strong>Read this first.</strong>
+  Everything measured here is browser-side DSP — spectral-flux onset detection, mel spectra, DTW.
+  These are <em>not</em> WhAM embeddings and <em>not</em> Fréchet Audio Distance; running those needs
+  the Python pipeline and a GPU. Synthesised codas are stylised realisations of published coda
+  <em>notation</em> (click count + rhythm class), not measurements of recordings.
+  Drop real DSWP / Watkins WAVs into either panel to analyse actual audio.
+  <button id="provDismiss" aria-label="Dismiss">×</button>
+</div>
+
+<main class="panels">
+
+  <!-- ============================ PANEL A ============================ -->
+  <section class="panel panel-a">
+    <div class="panel-head">
+      <h2><span class="dot"></span>A · Sperm whale</h2>
+      <div class="transport">
+        <button class="play" data-play="A">▶ Play</button>
+        <button class="ghost" data-file="A">Load WAV…</button>
+        <input type="file" accept="audio/*" hidden data-fileinput="A">
+      </div>
+    </div>
+
+    <div class="source-block">
+      <div class="block-label">Coda type <span class="hint">stylised from published notation</span></div>
+      <div id="codaGrid" class="chip-grid"></div>
+      <p class="note" id="codaNote"></p>
+    </div>
+
+    <div class="source-block controls">
+      <label>inter-pulse interval
+        <input type="range" id="ipi" min="2" max="10" step="0.1" value="5.5">
+        <output id="ipiOut">5.5 ms</output>
+        <span class="hint">spermaceti organ delay → body size → spectral comb</span>
+      </label>
+      <label>tempo scale
+        <input type="range" id="tempo" min="0.4" max="2.2" step="0.02" value="1">
+        <output id="tempoOut">1.00×</output>
+      </label>
+      <label>timing jitter
+        <input type="range" id="jitter" min="0" max="0.4" step="0.01" value="0">
+        <output id="jitterOut">0%</output>
+      </label>
+      <label>background noise
+        <input type="range" id="noise" min="0" max="1" step="0.01" value="0">
+        <output id="noiseOut">0%</output>
+        <span class="hint">raise this to probe the noise-artifact question</span>
+      </label>
+    </div>
+
+    <div class="plots">
+      <div class="plot"><span class="plot-label">waveform + detected onsets</span><canvas data-canvas="A-wave"></canvas></div>
+      <div class="plot"><span class="plot-label">spectrogram (log Hz)</span><canvas data-canvas="A-spec"></canvas></div>
+      <div class="plot"><span class="plot-label">click spectrum + peaks</span><canvas data-canvas="A-spectrum"></canvas></div>
+      <div class="plot tall"><span class="plot-label">click timeline + ICI contour</span><canvas data-canvas="A-ici"></canvas></div>
+    </div>
+
+    <dl class="readout" data-readout="A"></dl>
+  </section>
+
+  <!-- ============================ PANEL B ============================ -->
+  <section class="panel panel-b">
+    <div class="panel-head">
+      <h2><span class="dot"></span>B · Comparison source</h2>
+      <div class="transport">
+        <button class="play" data-play="B">▶ Play</button>
+        <button class="ghost" data-file="B">Load WAV…</button>
+        <input type="file" accept="audio/*" hidden data-fileinput="B">
+      </div>
+    </div>
+
+    <div class="tabs" id="tabs">
+      <button data-tab="rhythm" class="active">Rhythm</button>
+      <button data-tab="clicklang">Click language</button>
+      <button data-tab="animal">Animal</button>
+      <button data-tab="mic">Record</button>
+    </div>
+
+    <div class="tab-panes">
+      <div class="pane active" data-pane="rhythm">
+        <div id="rhythmGrid" class="chip-grid"></div>
+        <p class="note" id="rhythmNote"></p>
+        <div class="controls" id="rhythmControls"></div>
+      </div>
+
+      <div class="pane" data-pane="clicklang">
+        <div class="block-label">Language <span class="hint">click inventory differs by language</span></div>
+        <div id="langGrid" class="chip-grid"></div>
+        <div class="block-label">Click palette <span class="hint">click to insert</span></div>
+        <div id="clickPalette" class="chip-grid palette"></div>
+        <label class="text-input">sequence
+          <input type="text" id="clickSeq" value="ǃa ǀo ǂe ǁu ʘa" spellcheck="false">
+        </label>
+        <div id="clickExamples" class="chip-grid small"></div>
+        <div class="controls">
+          <label>syllable rate
+            <input type="range" id="clickRate" min="90" max="450" step="5" value="220">
+            <output id="clickRateOut">220 ms</output>
+          </label>
+          <label class="checkbox">
+            <input type="checkbox" id="voiced" checked> render voiced vowels between clicks
+          </label>
+        </div>
+        <p class="note" id="langNote"></p>
+      </div>
+
+      <div class="pane" data-pane="animal">
+        <div id="animalGrid" class="chip-grid"></div>
+        <p class="note" id="animalNote"></p>
+      </div>
+
+      <div class="pane" data-pane="mic">
+        <p class="note">Record a rhythm — tap, beatbox, speak a click sequence. Runs through the identical
+        analysis path as everything else. Needs <code>localhost</code> or HTTPS for microphone access.</p>
+        <div class="transport">
+          <button id="recBtn" class="rec">● Record</button>
+          <span id="recStatus" class="hint"></span>
+        </div>
+      </div>
+    </div>
+
+    <div class="plots">
+      <div class="plot"><span class="plot-label">waveform + detected onsets</span><canvas data-canvas="B-wave"></canvas></div>
+      <div class="plot"><span class="plot-label">spectrogram (log Hz)</span><canvas data-canvas="B-spec"></canvas></div>
+      <div class="plot"><span class="plot-label">click spectrum + peaks</span><canvas data-canvas="B-spectrum"></canvas></div>
+      <div class="plot tall"><span class="plot-label">click timeline + ICI contour</span><canvas data-canvas="B-ici"></canvas></div>
+    </div>
+
+    <dl class="readout" data-readout="B"></dl>
+  </section>
+</main>
+
+<!-- ============================ COMPARISON ============================ -->
+<section class="compare">
+  <div class="compare-head">
+    <h2>Comparison</h2>
+    <button class="play both" id="playBoth">▶ Play A then B</button>
+  </div>
+
+  <div class="compare-grid">
+    <div class="metrics">
+      <div class="metric" data-metric="rhythm">
+        <div class="metric-top"><span class="mname">rhythm shape</span><span class="mval">—</span></div>
+        <div class="bar"><i></i></div>
+        <p class="mdesc">DTW over duration-normalised ICI. Blind to tempo by construction.</p>
+      </div>
+      <div class="metric" data-metric="timbre">
+        <div class="metric-top"><span class="mname">timbre</span><span class="mval">—</span></div>
+        <div class="bar"><i></i></div>
+        <p class="mdesc">Cosine distance over mean log-mel spectrum.</p>
+      </div>
+      <div class="metric" data-metric="tempo">
+        <div class="metric-top"><span class="mname">tempo</span><span class="mval">—</span></div>
+        <div class="bar"><i></i></div>
+        <p class="mdesc">|log| ratio of click rates. What the rhythm metric deliberately ignores.</p>
+      </div>
+      <div class="metric" data-metric="regularity">
+        <div class="metric-top"><span class="mname">regularity</span><span class="mval">—</span></div>
+        <div class="bar"><i></i></div>
+        <p class="mdesc">Difference in ICI coefficient of variation.</p>
+      </div>
+    </div>
+
+    <div class="plot align">
+      <span class="plot-label">DTW alignment of normalised ICI contours</span>
+      <canvas data-canvas="align"></canvas>
+    </div>
+  </div>
+
+  <div class="verdict">
+    <div class="nearest">
+      <h3>Nearest coda types to B</h3>
+      <ol id="nearestList"><li class="empty">analyse both panels</li></ol>
+      <p class="mdesc">Rhythm-only nearest neighbour against the coda inventory. A tight match here
+      says the shape space is coarse — it is not evidence that anything was translated.</p>
+    </div>
+    <div class="interp">
+      <h3>Reading</h3>
+      <p id="interpText" class="empty">Pick a source on each side.</p>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <p>
+    Built on <a href="https://github.com/Project-CETI/wham">Project CETI · WhAM</a>
+    (<a href="https://arxiv.org/abs/2512.02206">arXiv:2512.02206</a>, NeurIPS 2025).
+    Coda notation follows the standard click-count + rhythm-class convention.
+    Click-consonant descriptions follow the Ladefoged &amp; Traill account of ǃXóõ.
+  </p>
+  <p class="warn">
+    Human clicks are velaric ingressive <em>consonants</em>; sperm whale clicks pattern as vowel-like
+    carriers. The word “click” is a false cognate across the two domains — a null result in this
+    comparison is the expected result, not a failure.
+  </p>
+</footer>
+
+<script type="module" src="js/main.js"></script>
+</body>
+</html>
