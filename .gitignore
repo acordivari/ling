@@ -32,3 +32,6 @@ node_modules/
 
 # macOS
 .DS_Store
+
+# Experiment artifacts — regenerable by re-running the check
+experiments/**/artifacts/

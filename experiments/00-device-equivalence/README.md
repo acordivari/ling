@@ -82,4 +82,69 @@ both devices.
 
 ## Result
 
-_Not yet run._
+**Run 2026-07-28. Verdict: EQUIVALENT.** All four criteria passed, none of them
+marginally. Checkpoints: `coarse.pth` / `c2f.pth` / `codec.pth` from Zenodo
+17633708, torch 2.7.1, macOS 26.2, Apple M5.
+
+```
+precondition — same seed, same device, twice:
+  cpu bit-identical: True
+  mps bit-identical: True
+
+P1 decode SNR (identical tokens): 107.8 dB   [pass >= 40]
+P2 top-1 agreement:              100.00%     [pass >= 99%]
+   max abs logit diff:           8.46e-05    (descriptive)
+S1 encode agreement, codebook 0: 100.00%     (unscored)
+   per-codebook: 100 100 100 100 100 100 100 100 100 100 100 100 100 100
+
+P3 mel distance — within-device median 0.00321  (range 0.00041–0.02411)
+                  cross-device median 0.00282  (range 0.00038–0.01958)
+                  ratio 0.878                   [pass <= 1.5]
+   rms cpu 0.01171 ± 0.00372 | mps 0.01274 ± 0.00621
+```
+
+### Reading these
+
+**P1 at 107.8 dB** is the float32 noise floor, not merely "good enough". The
+codec decode path is doing the same arithmetic on both devices.
+
+**P2 at exactly 100%** with max logit drift of 8.5e-05 is the important one. The
+transformer's *decisions* are identical; the drift is four orders of magnitude
+below anything that could flip an argmax.
+
+**P3 ratio of 0.878** means the cross-device spread is, if anything, marginally
+*smaller* than the within-device spread. The ratio landing slightly under 1.0 is
+not meaningful — it is median noise across 144 cross pairs versus 132 within
+pairs. What matters is that it is nowhere near the 1.5 threshold: cpu-vs-mps
+differences are entirely absorbed by ordinary seed-to-seed variation. Two
+generations from the same device differ from each other about as much as one from
+each device does.
+
+**S1 came back 100% on all 14 codebooks.** The pre-registered caution about
+residual-quantiser cascade turned out to be unnecessary — there was no tie-break
+flip to cascade from. Recording that the hedge was not needed, rather than
+quietly dropping it.
+
+### What this licenses, and what it does not
+
+Generations produced on MPS can be treated as interchangeable with CPU
+generations. Device no longer needs to be a suspect when a downstream result
+looks strange.
+
+It does **not** license these, none of which were tested:
+
+- **CUDA.** Both arms here are this machine. The upstream reference was CUDA, and
+  no CUDA run was available to compare against. This establishes cpu≡mps, not
+  that either matches the paper's numbers.
+- **One input, one configuration.** A single 3s synthetic click train, 80% mask,
+  12 sampling steps. Real DSWP audio, longer sequences, and other mask ratios are
+  untested — a divergence that only appears at length would not show up here.
+- **P2 used a random latent**, not an embedding produced by the real token path.
+  It isolates transformer arithmetic, which is what it was for, but it is not the
+  exact tensor `coarse_vamp` would see.
+- **The beat tracker and `fadtk`.** `wavebeat` was loaded with `wavebeat_ckpt=None`
+  throughout (INSTALL.md gotcha 6), and the embedding/FAD path was not exercised
+  at all. Experiment 1 will need its own check.
+
+Widening the input set is cheap — `check.py` takes about 90s per device — and
+worth doing before leaning on MPS for anything long-running.
