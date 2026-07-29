@@ -22,8 +22,14 @@ signals, and seeing what a rhythm metric and a timbre metric say about the pair.
 
 ```bash
 cd explorer && python3 -m http.server 8777   # → http://localhost:8777/
-node test/analysis.test.mjs                  # 84 assertions
+npm test                                     # 84 + 23 assertions
 ```
+
+It also carries a **glossary** (`◈ Glossary`, top bar): 75 entries covering the
+ML concepts this project depends on and plain-language descriptions of every
+dataset WhAM was trained on, each with a formal definition and an "explain like
+I'm 5" version. Figures in it were read from the shipped Zenodo checkpoints
+rather than the paper.
 
 Runs entirely client-side — no model, no GPU, no network. It synthesises codas
 from published coda notation and accepts drag-dropped WAVs, so it analyses real

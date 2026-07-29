@@ -16,8 +16,8 @@ python3 -m http.server 8777
 # open http://localhost:8777/
 ```
 
-No build step, no npm, no network. Six ES modules and one stylesheet. It has to
-be served over HTTP rather than opened as a `file://` URL because it uses ES
+No build step, no npm, no network. Eight ES modules and one stylesheet. It has
+to be served over HTTP rather than opened as a `file://` URL because it uses ES
 modules; microphone capture additionally requires `localhost` or HTTPS.
 
 ## What it is not
@@ -118,13 +118,52 @@ not fitted to real recordings. They fail safe — a marginal real click is
 reported as "no IPI" rather than given a fabricated value. **Re-check them
 against real DSWP audio before relying on any of this.**
 
+## Glossary
+
+`◈ Glossary` in the top bar opens a reference panel covering the machine
+learning concepts this project depends on and the datasets WhAM was trained on.
+75 terms across seven categories, searchable, with cross-links between related
+entries.
+
+Each entry has two registers: a **formal definition** that stays visible, and an
+**Explain Like I'm 5** version behind a toggle. The split is deliberate — the
+formal text is what you want when reading upstream code, the plain-language
+version is what you want when deciding whether a concept matters to an
+experiment.
+
+Numbers quoted in the entries were read out of the shipped Zenodo checkpoints
+and the upstream source, not transcribed from the paper:
+
+| | |
+|---|---|
+| `coarse.pth` | 335.9M params, 20 layers, 20 heads, d=1280, 4 codebooks |
+| `c2f.pth` | 277.8M params, 16 layers, 20 heads, d=1280, 14 codebooks (4 conditioning) |
+| `codec.pth` | 150.2M params, 44.1 kHz, 14 × 1024 codebooks, hop 768 |
+
+Two entries worth reading before interpreting any training run — **Frozen
+Weights** and **Parameters** — document a quirk inherited from upstream
+VampNet: `loralib` freezes its own base weights on construction and nothing
+sets them back, so roughly 15% of the network is trainable even during a full
+training pass, and upstream's own parameter counter reports only that 15%.
+
+The panel is self-contained. `js/glossary.js` imports nothing but its own data,
+and nothing else imports it — deleting the two files and one `<script>` tag
+removes the feature cleanly.
+
 ## Tests
 
 ```bash
-node test/analysis.test.mjs
+npm test                          # both suites
+node test/analysis.test.mjs       # 84 assertions, signal round trip
+node test/glossary.test.mjs       # 23 assertions, reference data integrity
 ```
 
-84 assertions. They synthesise signals with known structure and check the
+The glossary suite checks the wiring rather than the prose: unique ids, every
+`seeAlso` resolving to a real entry, categories matching the filter list, and
+the two registers actually differing. All three failure modes are silent in the
+browser — a dead cross-link just renders as nothing.
+
+The analysis suite is 84 assertions. They synthesise signals with known structure and check the
 analysis recovers it — the only reason to trust any number the UI shows. The
 IPI assertions are rate-based over repeated trials because the click grains are
 noise-based and detection is genuinely stochastic at the edges.
@@ -184,6 +223,8 @@ js/library.js     coda inventory, click inventories, source definitions
 js/compare.js     DTW, distances, nearest-coda search
 js/viz.js         canvas plots
 js/main.js        wiring
+js/glossary.js    reference panel UI (search, filter, cross-links)
+js/glossary-data.js  75 glossary entries + category definitions
 ```
 
 `js/dsp.js` and `js/compare.js` are pure functions over `Float32Array` and have

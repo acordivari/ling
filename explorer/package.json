@@ -4,7 +4,7 @@
   "type": "module",
   "description": "Present only so Node treats js/*.js as ES modules when running the tests. The app itself has no dependencies and no build step.",
   "scripts": {
-    "test": "node test/analysis.test.mjs",
+    "test": "node test/analysis.test.mjs && node test/glossary.test.mjs",
     "serve": "python3 -m http.server 8777"
   }
 }

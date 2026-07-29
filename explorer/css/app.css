@@ -259,3 +259,182 @@ footer .warn em { color: #d9b1b1; font-style: normal; font-weight: 600; }
 /* -------------------------------------------------------- drag + drop */
 
 .panel.dragover { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 7%, var(--panel)); }
+
+/* ------------------------------------------------------------ glossary */
+
+#glossaryBtn { align-self: center; font-family: var(--mono); font-size: 11px; }
+#glossaryBtn:hover { color: var(--text); }
+
+body.g-lock { overflow: hidden; }
+
+.g-overlay {
+  position: fixed; inset: 0; z-index: 50;
+  display: flex; align-items: center; justify-content: center;
+  padding: 3vh 3vw;
+  background: #05070bd0;
+  backdrop-filter: blur(3px);
+}
+.g-overlay[hidden] { display: none; }
+
+.g-modal {
+  display: flex; flex-direction: column;
+  width: min(96vw, 1080px); height: min(94vh, 840px);
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: 0 24px 70px #000000a0;
+}
+
+/* -- header */
+.g-head {
+  display: flex; align-items: center; gap: 14px;
+  padding: 13px 14px 13px 18px;
+  border-bottom: 1px solid var(--line);
+  background: linear-gradient(180deg, #0d121a, var(--panel));
+}
+.g-brand { flex: 1; min-width: 0; }
+.g-kicker {
+  font-family: var(--mono); font-size: 9.5px; text-transform: uppercase;
+  letter-spacing: 0.14em; color: var(--a);
+}
+.g-title-row { display: flex; align-items: baseline; gap: 9px; }
+.g-title-row h2 { font-size: 15px; }
+.g-count { font-family: var(--mono); font-size: 10.5px; color: var(--faint); }
+
+.g-search {
+  font-family: var(--mono); font-size: 12px;
+  width: 210px; padding: 6px 10px;
+  border: 1px solid var(--line); border-radius: 6px;
+  background: #0c1017; color: var(--text);
+}
+.g-search:focus { outline: none; border-color: var(--a); }
+.g-search::placeholder { color: var(--faint); }
+
+.g-close {
+  border: 0; background: none; color: var(--faint);
+  font-size: 22px; line-height: 1; padding: 2px 6px;
+}
+.g-close:hover { background: none; color: var(--text); }
+
+/* -- category pills */
+.g-pills {
+  display: flex; flex-wrap: wrap; gap: 5px;
+  padding: 10px 14px; border-bottom: 1px solid var(--line);
+  background: var(--panel-2);
+}
+.g-pill {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-family: var(--mono); font-size: 10.5px;
+  padding: 4px 9px; border-radius: 5px;
+  border: 1px solid var(--line); background: var(--bg); color: var(--dim);
+}
+.g-pill:hover { color: var(--text); border-color: #38455a; background: var(--bg); }
+.g-pill.active {
+  color: var(--cat); border-color: var(--cat);
+  background: color-mix(in srgb, var(--cat) 14%, var(--bg));
+}
+.g-cat-icon { color: var(--cat); font-size: 11px; }
+.g-pill-n { color: var(--faint); font-size: 9.5px; }
+.g-pill.active .g-pill-n { color: color-mix(in srgb, var(--cat) 65%, var(--dim)); }
+
+/* -- list */
+/* Flex column, not grid: as a fixed-height flex child with 75 auto rows, a
+   grid squeezes every row to ~1px instead of overflowing into the scroller. */
+/* position: relative so a card's offsetTop is measured against this scroller.
+   No scroll-behavior here on purpose — as a CSS property it hijacks every
+   programmatic scrollTop write and stalls; jumpTo() asks for smooth per call. */
+.g-list {
+  position: relative;
+  flex: 1; overflow-y: auto;
+  padding: 12px 14px;
+  display: flex; flex-direction: column; gap: 9px;
+}
+
+.g-entry {
+  flex: 0 0 auto;
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--cat);
+  border-radius: 7px;
+  background: var(--panel-2);
+  overflow: hidden;
+}
+.g-entry.g-flash { border-color: var(--cat); background: color-mix(in srgb, var(--cat) 9%, var(--panel-2)); }
+
+.g-entry-head {
+  display: flex; align-items: baseline; justify-content: space-between; gap: 12px;
+  flex-wrap: wrap;
+  padding: 10px 13px 8px;
+  border-bottom: 1px solid var(--line);
+}
+.g-title { display: flex; align-items: baseline; gap: 9px; flex-wrap: wrap; min-width: 0; }
+.g-title h3 { font-size: 13.5px; }
+.g-symbol {
+  font-family: var(--mono); font-size: 10.5px; color: var(--cat);
+  padding: 1px 6px; border-radius: 4px;
+  background: color-mix(in srgb, var(--cat) 13%, transparent);
+}
+.g-cat {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-family: var(--mono); font-size: 9.5px; color: var(--faint);
+  text-transform: uppercase; letter-spacing: 0.06em; white-space: nowrap;
+}
+
+.g-body { padding: 10px 13px 12px; }
+.g-label {
+  font-family: var(--mono); font-size: 9px; text-transform: uppercase;
+  letter-spacing: 0.14em; color: var(--faint); margin-bottom: 5px;
+}
+.g-formal { margin: 0 0 11px; font-size: 12.5px; line-height: 1.62; color: var(--dim); }
+
+.g-toggle {
+  display: inline-flex; align-items: center; gap: 7px;
+  font-family: var(--mono); font-size: 9px; text-transform: uppercase;
+  letter-spacing: 0.14em;
+  border: 0; background: none; padding: 3px 0; color: var(--faint);
+}
+.g-toggle:hover { background: none; color: var(--b); }
+.g-toggle[aria-expanded="true"] { color: var(--b); }
+.g-caret { font-size: 10px; }
+
+.g-eli5 {
+  margin-top: 7px; padding: 9px 12px;
+  border-left: 2px solid color-mix(in srgb, var(--b) 45%, transparent);
+  border-radius: 5px;
+  background: #191408;
+}
+.g-eli5 p { margin: 0; font-size: 12.5px; line-height: 1.62; color: #d9c9a4; }
+
+.g-see {
+  display: flex; align-items: baseline; gap: 6px; flex-wrap: wrap;
+  margin-top: 11px; padding-top: 9px; border-top: 1px solid var(--line);
+}
+.g-see-label {
+  font-family: var(--mono); font-size: 9px; text-transform: uppercase;
+  letter-spacing: 0.14em; color: var(--faint);
+}
+.g-link {
+  font-family: var(--mono); font-size: 10.5px;
+  padding: 2px 7px; border-radius: 4px;
+  border: 1px solid var(--line); background: var(--bg); color: var(--dim);
+}
+.g-link:hover {
+  color: var(--cat); border-color: var(--cat);
+  background: color-mix(in srgb, var(--cat) 12%, var(--bg));
+}
+
+.g-empty { padding: 34px 4px; color: var(--faint); font-style: italic; font-size: 12.5px; }
+.g-empty p { margin: 0; }
+
+.g-foot {
+  padding: 9px 14px; border-top: 1px solid var(--line);
+  background: var(--bg);
+  font-size: 10.5px; line-height: 1.5; color: var(--faint);
+}
+
+@media (max-width: 720px) {
+  .g-overlay { padding: 0; }
+  .g-modal { width: 100vw; height: 100dvh; border-radius: 0; border: 0; }
+  .g-head { flex-wrap: wrap; }
+  .g-search { width: 100%; order: 3; }
+}
