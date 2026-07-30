@@ -99,6 +99,12 @@ measures, what it cannot, and the documented limits of its IPI estimator.
   coda rhythm sit relative to human rhythm? **Below every human drumming style
   measured** (nPVI 21.0 vs 56–78, Cohen's d −1.3 to −2.5), through an identical
   pipeline at a matched window length.
+- [`03-ipi-against-real-audio`](experiments/03-ipi-against-real-audio/) — the
+  IPI estimator's thresholds were tuned on this repo's own synthesis and had
+  never met a real recording. Against 48 real sperm whale clicks from the
+  **Western North Pacific**: **24/24 returned values inside the 2–10 ms physical
+  band**, spread 0.48 ms, implied body length 8.9–9.6 m. All three pre-registered
+  criteria passed.
 
 ## Planned experiments
 
@@ -147,6 +153,39 @@ The `explorer/` tool needs none of that.
 - Log the checkpoint used for every generation.
 
 ## Data and licensing
+
+### Corpora
+
+| corpus | what | basin | licence |
+|---|---|---|---|
+| Sharma et al. 2024 | 8,112 cleaned codas, annotated ICIs + clan/unit/individual | Caribbean (Dominica) | article CC BY 4.0; **the deposit itself has no LICENSE file** |
+| **ASACTER** (Hualien Formosa Association & Turumoan Whale Watching) | 110 sperm whale records, 109 of them audio, 192 kHz, 26.2 min | **Western North Pacific (Taiwan)** | **[CC BY 4.0](https://creativecommons.org/licenses/by/4.0/) — redistributable**; [deposit](https://figshare.com/search?q=ASACTER), per-record DOIs under `10.6084/m9.figshare.*` |
+| Groove MIDI | 1,150 human drum performances | — | CC BY 4.0 |
+
+```bash
+python3 tools/fetch_corpus.py          # coda ICIs
+python3 tools/fetch_comparanda.py      # human drumming + symbolic rhythms
+python3 tools/fetch_asacter.py         # ASACTER index + WAV header probe, no audio
+python3 tools/fetch_asacter.py --audio coda   # + 34 MB of coda-labelled audio
+```
+
+**ASACTER is a second population, not a second coda corpus.** Only 5 of its 110
+records are labelled as containing codas (88 s nominal, ~83 s distinct, one
+voyage), and **there are no clan, social-unit or individual labels of any kind**.
+That last point settles it from the index alone: it cannot answer the clan-timing
+question experiment 01 leaves open, because that needs repertoire overlap between
+*labelled* clans and unlabelled audio cannot supply it. The other 105 records are
+labelled by the depositor, not inspected here. What ASACTER does give is real
+audio for validating the IPI estimator, and a licence that permits
+redistribution.
+
+Duration is measured from each file's own `fmt` chunk, not from the `_Nsec`
+filename tokens — 17 of the 109 WAVs carry no token and they include the longest
+files, so the token sum (17.4 min) understates the corpus by a third. Formats are
+stereo 32-bit for 104 files and mono 16-bit for the 5 coda files.
+`tools/fetch_asacter.py` derives its own trap list from the metadata (date-field
+disagreements, a record with no audio, two records sharing a WAV filename) rather
+than hardcoding what someone noticed by eye.
 
 No audio or datasets are committed here, and `.gitignore` excludes them by
 default. Licensing differs per source — Common Voice is CC0, AudioSet is

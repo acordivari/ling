@@ -334,11 +334,36 @@ export function iciFeatures(onsets) {
 // answer for most non-whale material: a woodpecker strike has no multipulse
 // structure to find.
 // Search range is bounded to the physically plausible sperm whale IPI band
-// (~2-10 ms, corresponding to roughly 7-16 m animals). This is not tuning: a
-// lag outside that band cannot be a spermaceti organ reflection whatever the
-// autocorrelation says, and bounding it removes the one class this method
-// genuinely cannot resolve — a click train whose spacing happens to look like
-// a multipulse interval. A dolphin buzz at ~12 ms spacing is exactly that case.
+// (~2-10 ms). Via the Gordon (1991) relation this repo uses elsewhere
+// (tools/asacter_ipi_check.py) that band is 7.7-19.3 m, not the "7-16 m" this
+// comment claimed for a long time — and both ends are outside Gordon's own
+// calibration range (Sri Lankan females and immatures, ~7.5-12 m), so treat the
+// edges as nominal. Growcott et al. (2011) supersedes Gordon above ~12 m.
+//
+// Bounding is not tuning: a lag outside the band cannot be a spermaceti organ
+// reflection whatever the autocorrelation says, and it removes the one class
+// this method genuinely cannot resolve — a click train whose spacing happens to
+// look like a multipulse interval. A dolphin buzz at ~12 ms spacing is exactly
+// that case.
+//
+// But be clear about what the bound is NOT. It is a size prior, and it is
+// applied before any measurement, so:
+//   - every non-null return is inside the band by construction. "The values
+//     were all physically plausible" restates this constant; it is not
+//     evidence the estimator declined to fabricate. Do not score it.
+//   - the 2 ms floor maps to ~7.7 m, so no calf or small juvenile is
+//     reachable. Any size distribution this produces is censored from below.
+//
+// KNOWN FAILURE, measured in experiments/03-ipi-against-real-audio. A broadband
+// impulse train — alternating-polarity clicks at a fixed rate, i.e. what
+// propeller cavitation looks like — is NOT rejected. Synthetic trains at
+// 120-450 Hz fire 8/8, all inside the band, at confidence 0.39-0.77 against
+// 0.23-0.49 for real sperm whale clicks. Neither the band, nor the body-length
+// check, nor the carrier guards separate them; they score BETTER than the real
+// thing, so raising the confidence floor would delete whales before artefacts.
+// The only thing that separates them is consistency across a set, and only if
+// the artefact's rate varies. Treat a single confident IPI from vessel-adjacent
+// audio as unproven.
 export function estimateIpi(signal, sampleRate, onsets, { minMs = 2, maxMs = 10, carrierHz = null } = {}) {
   if (!onsets.length) return null;
 
@@ -386,6 +411,25 @@ export function estimateIpi(signal, sampleRate, onsets, { minMs = 2, maxMs = 10,
   const maxLag = Math.min(Math.round((maxMs / 1000) * sampleRate), seg.length - 16);
   if (maxLag <= minLag) return null;
 
+  // Every lag is normalised by the SAME full-window energy r0, even though only
+  // (N - lag) products contribute at lag `lag`. That is the standard *biased*
+  // autocorrelation estimator, and its triangular taper is deliberate: it damps
+  // the high-variance long-lag peaks you get when few samples overlap, which is
+  // one of the things keeping this function from reporting spurious 9 ms IPIs.
+  //
+  // ACCEPTED LIMITATION, not an oversight. The taper is steep — at the 928-sample
+  // window this code sees in practice, a 10 ms peak is penalised 46% relative to
+  // a 2 ms one before any signal is considered (832/928 terms at 2 ms, 448/928 at
+  // 10 ms). So the estimator is least sensitive at long lags, i.e. against the
+  // LARGEST animals, and its output feeds a body-length regression: a survey
+  // built on this would under-detect mature males relative to females. Some
+  // fraction of any non-fire rate is long-lag suppression rather than correct
+  // refusal.
+  //
+  // Switching to a coherent per-lag normalisation (r / sqrt(e1*e2) over the
+  // overlap) was measured against real ASACTER clicks and is strictly worse:
+  // 16/48 firing instead of 24/48, spread 1.02 ms instead of 0.50, plus a new
+  // out-of-family 2.29 ms outlier. See experiments/03-ipi-against-real-audio.
   let r0 = 0;
   for (let i = 0; i < seg.length; i++) r0 += seg[i] * seg[i];
   if (r0 <= 0) return null;

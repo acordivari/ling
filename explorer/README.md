@@ -160,9 +160,27 @@ reading any rhythm distance involving clave, Amen, isochronous or beatbox.
 **Threshold provenance.** The confidence floor (0.22) and the cycle-count cuts
 (20 against spectral centroid, 3 against zero-crossing rate) were set by
 measuring the synthetic sources in `library.js`, not derived from physics and
-not fitted to real recordings. They fail safe — a marginal real click is
-reported as "no IPI" rather than given a fabricated value. **Re-check them
-against real DSWP audio before relying on any of this.**
+not fitted to real recordings.
+
+**That re-check has now been run** — against 48 real sperm whale click segments
+from ASACTER, using the shipped `estimateIpi` with `carrierHz` supplied exactly
+as `analyze()` supplies it. See `experiments/03-ipi-against-real-audio/`. Two
+results matter here:
+
+- **The margins are thin.** The tightest real click cleared the confidence floor
+  by 3 % (6 of 24 sat within 0.05 of it) and the spectral-centroid cut by
+  **0.4 %**. The ZCR cut is comfortable (+200 %). These thresholds are not
+  validated so much as caught barely passing.
+- **They do not fail safe against periodic broadband artefacts.** Synthetic
+  impulse trains at 120–450 Hz — what propeller cavitation looks like — fire
+  8/8, all inside the 2–10 ms band, at *higher* confidence (0.39–0.77) than any
+  real click (0.23–0.49). Raising the floor would delete whales before
+  artefacts. The estimator does correctly refuse white noise and single pulses
+  (0/48 each).
+
+They fail safe against noise and against structureless impulses. They do not
+fail safe against a rhythm. Do not read a single confident IPI from
+vessel-adjacent audio as evidence of a whale.
 
 ## Glossary
 

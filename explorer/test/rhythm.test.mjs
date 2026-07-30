@@ -275,6 +275,40 @@ console.log("\n== surrogate test ==");
     "zero jitter reduces exactly to isochronous");
 }
 
+console.log("\n== the RNG refuses a fumbled seed ==");
+{
+  // Found by the adversarial-review framework's own smoke test. `seed >>> 0`
+  // silently turned undefined, null, NaN, a missing argument and any non-numeric
+  // string into seed 0 — a valid-looking deterministic stream from a mistake, in
+  // the one module whose whole job is the reproducibility guarantee. Seeds here
+  // are often DERIVED (state.seed + k for pooled permutation slices), so a bad
+  // arithmetic result would have been absorbed in silence.
+  for (const bad of [undefined, null, NaN, "abc", 1.5, "7"]) {
+    let threw = false;
+    try { makeRng(bad); } catch { threw = true; }
+    ok(threw, `makeRng rejects ${typeof bad} ${String(bad)}`);
+  }
+  let fine = true;
+  try { makeRng(0); makeRng(7); makeRng(-3); makeRng(2 ** 31); } catch { fine = false; }
+  ok(fine, "and still accepts any integer, including 0 and negatives");
+
+  // makeRng gives disjoint WINDOWS of one sequence, not independent generators.
+  // Consecutive seeds are C^-1 mod 2^32 = 3,696,798,301 draws apart, which is
+  // far beyond any realistic use — but the docstring used to claim independence,
+  // and observatory.js's slice-pooling argument leaned on it.
+  const a = makeRng(1), b = makeRng(2);
+  const A = [], B = [];
+  for (let i = 0; i < 2000; i++) { A.push(a()); B.push(b()); }
+  ok(A.every((v, i) => v !== B[i]),
+    "seeds 1 and 2 share no positionwise value over 2,000 draws");
+  const mA = A.reduce((s, v) => s + v) / A.length, mB = B.reduce((s, v) => s + v) / B.length;
+  let num = 0, dA = 0, dB = 0;
+  for (let i = 0; i < A.length; i++) { num += (A[i] - mA) * (B[i] - mB); dA += (A[i] - mA) ** 2; dB += (B[i] - mB) ** 2; }
+  const r = num / Math.sqrt(dA * dB);
+  ok(Math.abs(r) < 0.05, "and are effectively uncorrelated in the range actually used",
+    `r = ${r.toFixed(4)}`);
+}
+
 console.log("\n== regression: shift statistics must not be read as proportions ==");
 {
   // This shipped wrong once. `explainedByNull` is nullMean/observed, which is a

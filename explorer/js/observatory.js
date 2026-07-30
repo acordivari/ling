@@ -255,10 +255,12 @@ function reveal() {
   //
   // 10,000 permutations over 6,105 codas is ~2.1 s of straight-line work, and a
   // synchronous loop that long freezes the page — no scrolling, no cancelling,
-  // and on some browsers a "page unresponsive" prompt. Permutation draws are
-  // i.i.d., so N slices of M draws with deterministically derived seeds are
-  // statistically identical to one run of N*M, and the null distributions pool
-  // by concatenation. Determinism is preserved: the same base seed yields the
+  // and on some browsers a "page unresponsive" prompt. Permutation draws within a
+  // slice are i.i.d., and the derived seeds land ~3.7 billion draws apart in the
+  // generator's sequence (see makeRng in random.js: separate seeds give disjoint
+  // WINDOWS of one stream, not independent generators — adequate here, but the
+  // distinction is real). So N slices of M draws behave as one run of N*M, and
+  // the null distributions pool by concatenation. Determinism is preserved: the same base seed yields the
   // same derived seeds and therefore the same pooled null.
   const SLICE = 2000;
   (async () => {
