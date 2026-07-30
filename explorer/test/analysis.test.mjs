@@ -17,6 +17,7 @@ import { analyze, estimateIpi } from "../js/dsp.js";
 import { compare, nearestCoda } from "../js/compare.js";
 import { CODA_TYPES, CLICK_TYPES, CLICK_EXAMPLES, RHYTHM_SOURCES, ANIMAL_SOURCES } from "../js/library.js";
 import { renderCoda, renderRhythm, renderAnimal, renderClickLanguage, bjorklund, textToMorse } from "../js/synth.js";
+import { setSeed } from "../js/random.js";
 
 const SR = 44100;
 let fails = 0;
@@ -25,6 +26,13 @@ const ok = (c, m, extra = "") => {
   if (!c) fails++;
 };
 const sig = (r) => [r.signal, r.sampleRate];
+
+// Synthesis is noise-based, so every assertion below is really an assertion
+// about a particular noise realisation. Before seeding, the band-edge IPI case
+// went red about 1 run in 40 — not a regression, just an unlucky draw. Each
+// stochastic block re-seeds so results do not depend on the order tests run in.
+const seed = (n) => setSeed(n);
+seed(1);
 
 // ------------------------------------------------- coda round trip
 console.log("\n== coda synthesis -> onset recovery ==");
@@ -47,6 +55,7 @@ for (const coda of CODA_TYPES) {
 // Thresholds are set well away from the measured rates — an assertion placed
 // at the knee of a degradation curve tests sampling luck, not behaviour.
 console.log("\n== multipulse IPI recovery ==");
+seed(101);
 const ipiRate = (opts, runs = 12) => {
   let hits = 0, worstErr = 0;
   for (let i = 0; i < runs; i++) {
@@ -56,6 +65,7 @@ const ipiRate = (opts, runs = 12) => {
   return { rate: hits / runs, worstErr };
 };
 for (const trueIpi of [3, 4, 5.5, 7, 8, 9.5]) {
+  seed(200 + Math.round(trueIpi * 10));
   const { rate, worstErr } = ipiRate({ ipiMs: trueIpi });
   ok(rate >= 0.9, `IPI ${trueIpi}ms detected reliably`, `${(rate * 100).toFixed(0)}%`);
   ok(rate === 0 || worstErr < 0.4, `IPI ${trueIpi}ms accurate`, `worst err ${worstErr.toFixed(2)}ms`);
@@ -64,6 +74,18 @@ for (const trueIpi of [3, 4, 5.5, 7, 8, 9.5]) {
   // 2.5 ms sits at the bottom edge of the 2-10 ms search band, where the
   // cycle-count guards start rejecting. Degraded detection here is expected
   // and fails safe.
+  //
+  // This is the assertion that used to flake. Measured across 200 independent
+  // seeds at N=12: min 0.50, p05 0.67, median 0.83, mean 0.85 — so the 0.6
+  // threshold genuinely fails on 2.0% of seeds, which is exactly the ~1-in-40
+  // rate that was observed before seeding. Seeding removes the flake; it does
+  // not make the estimator better, and the reader should not read the 100%
+  // below as typical. Seed 2500 happens to draw above the median.
+  //
+  // Tradeoff worth naming: with a fixed seed this no longer detects a small
+  // regression in detection rate unless it crosses this particular draw. It is
+  // a stable regression tripwire, not a power analysis.
+  seed(2500);
   const { rate } = ipiRate({ ipiMs: 2.5 });
   ok(rate >= 0.6, "IPI 2.5ms (band edge) mostly detected", `${(rate * 100).toFixed(0)}%`);
 }
@@ -88,10 +110,16 @@ for (const trueIpi of [3, 4, 5.5, 7, 8, 9.5]) {
 
 // IPI must NOT fire on non-whale material. This is the property that matters:
 // the tool uses IPI to argue a whale/non-whale distinction, so a false positive
-// here is worse than a miss. dolphin-burst is the documented exception — a
-// 4-6 ms click train is genuinely indistinguishable from a 6 ms internal echo
-// by autocorrelation, so it is allowed to fire but must stay low-confidence.
+// here is worse than a miss.
+//
+// dolphin-burst used to be carved out of this check as "the documented
+// exception" at ~88%. That exemption was wrong: the failure was not an
+// irreducible property of autocorrelation but an unbounded analysis window, and
+// once the window must be clipped by a following onset the source is refused
+// outright. It is now included in the aggregate like everything else — an
+// exemption that hides a fixable defect is worse than a failing test.
 console.log("\n== IPI specificity (must not fire on non-whale sources) ==");
+seed(303);
 {
   const RUNS = 12;
   const fireRate = (gen) => {
@@ -113,9 +141,6 @@ console.log("\n== IPI specificity (must not fire on non-whale sources) ==");
   // actually worth knowing.
   let fires = 0, trials = 0, worstName = "", worstRate = 0;
   for (const [name, gen] of sources) {
-    // dolphin-burst is the documented exception: a 4-6 ms click train is not
-    // separable from a 6 ms internal echo by autocorrelation. Measured ~88%.
-    if (name === "dolphin-burst") continue;
     const p = fireRate(gen);
     fires += p * RUNS;
     trials += RUNS;
@@ -123,9 +148,42 @@ console.log("\n== IPI specificity (must not fire on non-whale sources) ==");
   }
   const aggregate = fires / trials;
   ok(aggregate <= 0.05,
-     `IPI aggregate false-positive rate across ${sources.length - 1} non-whale sources`,
+     `IPI aggregate false-positive rate across all ${sources.length} non-whale sources`,
      `${(aggregate * 100).toFixed(1)}% of ${trials} trials` +
      (worstRate > 0 ? ` (worst: ${worstName} ${(worstRate * 100).toFixed(0)}%)` : ""));
+}
+
+// ------------------------------------------------- IPI must not fabricate a species
+console.log("\n== IPI refuses an unbounded analysis window ==");
+seed(707);
+{
+  // This was a real safety defect, not a tuning issue. dolphin-burst renders 40
+  // clicks at 6->4 ms; spectral flux resolves only ONE of them, because at that
+  // rate there is no recoverable per-click rising edge. With a single onset there
+  // was no following onset to clip the window against, so `available` fell back
+  // to Infinity, the 20 ms window swallowed ~4 dolphin clicks, and
+  // autocorrelation reported their ~6 ms spacing as an intra-click IPI — 10 times
+  // out of 10, at the estimator's stated confidence. Via Gordon (1991) a 6 ms IPI
+  // implies a sperm whale of roughly 13 m. The tool was inventing a species from
+  // a dolphin.
+  const burst = ANIMAL_SOURCES.find((a) => a.id === "dolphin-burst");
+  let fabricated = 0;
+  for (let i = 0; i < 20; i++) if (analyze(...sig(renderAnimal(SR, burst)), {}).ipi) fabricated++;
+  ok(fabricated === 0, "dolphin-burst never yields an IPI", `${fabricated}/20 fabrications`);
+
+  // A count-based guard does NOT close this. The bound depends on whether a
+  // LATER onset exists, not on how many onsets there are, so two onsets 400 ms
+  // apart still leave the window unbounded in practice.
+  const d = renderAnimal(SR, burst);
+  ok(estimateIpi(d.signal, d.sampleRate, [0.01, 0.41], {}) === null,
+     "hand-supplied distant onsets are refused too — the bound is the guard, not the count");
+
+  // And the guard must not cost real detections.
+  let detected = 0, trials = 0;
+  for (const coda of CODA_TYPES) {
+    for (let i = 0; i < 3; i++) { trials++; if (analyze(...sig(renderCoda(SR, coda, { ipiMs: 5.5 })), {}).ipi) detected++; }
+  }
+  ok(detected === trials, "every real coda is still detected", `${detected}/${trials}`);
 }
 
 // ------------------------------------------------- morse

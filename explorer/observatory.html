@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Coda Observatory — null models on real sperm whale codas</title>
+<link rel="stylesheet" href="css/app.css">
+<link rel="stylesheet" href="css/observatory.css">
+</head>
+<body class="observatory">
+
+<header class="topbar">
+  <div class="brand">
+    <h1>Coda Observatory</h1>
+    <p class="sub">Real measured sperm whale codas · what changes when you change the control</p>
+  </div>
+  <div class="settings">
+    <label>permutations
+      <select id="iterSel">
+        <option value="500">500</option>
+        <option value="2000" selected>2,000</option>
+        <option value="10000">10,000</option>
+      </select>
+    </label>
+    <label>seed
+      <input type="number" id="seedInput" value="1" min="1" step="1" style="width:5.5em">
+    </label>
+    <a class="ghost" href="index.html">← Explorer</a>
+  </div>
+</header>
+
+<div id="loadStatus" class="load-status">
+  <h2>Loading corpus…</h2>
+</div>
+
+<div id="app" hidden>
+
+  <div class="provenance" id="prov"><span id="provText"></span></div>
+
+  <main class="obs-main">
+
+    <!-- ==================== the point of the tool ==================== -->
+    <section class="thesis">
+      <h2>A number is not a finding until you say what it is being compared against</h2>
+      <p>
+        Every statistic on this page is computed from real annotated inter-click intervals —
+        no synthesis, no model. What changes between the panels below is not the data and not
+        the statistic. It is the <strong>null model</strong>: the specific thing you are claiming
+        the effect is <em>not</em>. Switch it and watch conclusions that looked solid dissolve,
+        or survive.
+      </p>
+      <p class="dim">
+        The headline number to watch is <strong>explained by null</strong> — how much of the
+        observed value the control already produces on its own. A vanishing p-value sitting next
+        to “the null explains 99.0% of this” is not a discovery, and this tool is built to make
+        that visible rather than let it hide behind significance.
+      </p>
+      <p class="dim">
+        <strong>But it is not a single scale.</strong> Each null controls for a different thing,
+        so their percentages answer different questions and cannot be composed. The clan claim's
+        stratified null controls for repertoire composition but not for the fact that codas from
+        one social unit are not independent; its cluster null does the reverse. 99.0% and 25.3%
+        are both true and neither is “the answer”. Where a combined null would be the honest
+        test, the code refuses to fake one rather than print a number that looks like a verdict.
+      </p>
+    </section>
+
+    <!-- ==================== cross-domain ladder ==================== -->
+    <section class="card">
+      <h2>Where coda rhythm sits among other rhythms</h2>
+      <p class="lede">
+        nPVI measures durational contrast between adjacent intervals: 0 is a metronome, ~67 is a
+        strict 2:1 alternation, ~100 is a memoryless random process. Every source below is cut
+        into matched 4-interval windows and put through the identical pipeline, because nPVI
+        variance depends strongly on window length.
+      </p>
+      <div id="ladder" class="ladder"></div>
+      <p class="footnote">
+        <strong>Not shown, deliberately:</strong> published per-language nPVI values for human
+        speech. Those are computed over vocalic intervals across whole sentences, not 4-interval
+        windows, so putting them on this axis would compare measurement protocols rather than
+        rhythms. The drumming comparison is sound because both sides were measured here, the
+        same way.
+      </p>
+    </section>
+
+    <!-- ==================== the null lab ==================== -->
+    <section class="card lab">
+      <h2>The Null Lab</h2>
+
+      <div class="lab-grid">
+
+        <nav class="claim-col" aria-label="Claims">
+          <h3>Pick a claim</h3>
+          <div id="claimList" role="group" aria-label="Claims"></div>
+        </nav>
+
+        <div class="lab-col">
+          <div class="question">
+            <h3 id="qTitle"></h3>
+            <p id="qPlain"></p>
+            <dl class="meta">
+              <div><dt>Statistic</dt><dd id="qStat"></dd></div>
+              <div><dt>Pre-registered prediction</dt><dd id="qPred" class="pred"></dd></div>
+            </dl>
+            <dl class="meta ctx" id="qContext"></dl>
+          </div>
+
+          <div class="null-picker">
+            <h3>Choose the control condition</h3>
+            <div id="nullTabs" class="null-tabs" role="group" aria-label="Control condition"></div>
+            <p id="nullWhy" class="null-why"></p>
+          </div>
+
+          <!-- step 1: commit -->
+          <div id="predictStep" class="step predict">
+            <h3>First — what do you expect this null to do?</h3>
+            <p id="predictHint" class="dim"></p>
+            <div id="predictChoice" class="predict-choice" role="group" aria-label="Your prediction"></div>
+            <button id="revealBtn" class="primary" disabled>Reveal the result</button>
+          </div>
+
+          <!-- step 2: result -->
+          <div id="resultStep" class="step result" tabindex="-1" hidden>
+            <div id="predictFeedback" class="pred-feedback"></div>
+
+            <div id="verdictBox" class="verdict">
+              <h3 id="verdictHead"></h3>
+              <p id="verdictNull" class="verdict-null"></p>
+              <p id="verdictBody"></p>
+            </div>
+
+            <canvas id="nullPlot" aria-label="Null distribution with the observed value marked"></canvas>
+            <p id="plotCaption" class="caption"></p>
+
+            <table class="stats"><tbody id="statTable"></tbody></table>
+            <p id="runNote" class="footnote"></p>
+
+            <div id="multiplicityBox" class="multiplicity" hidden>
+              <h4>Multiple comparisons</h4>
+              <p id="multiplicityNote" class="dim"></p>
+              <table class="stats mult">
+                <thead><tr><th>test</th><th class="num">p</th><th class="num">q (BH)</th></tr></thead>
+                <tbody id="multiplicityList"></tbody>
+              </table>
+              <p class="footnote">
+                Benjamini-Hochberg assumes tests are independent or positively dependent.
+                Several of these run on the <em>same</em> codas under different nulls, so they are
+                strongly dependent and BH is not exactly right here. Treat q as an indication of
+                what multiplicity costs you, not as a certified correction — and note that a
+                q-value cannot rescue a result whose null already explains 99% of it.
+              </p>
+            </div>
+
+            <div id="historyBox" class="history" hidden>
+              <h4>Your predictions <span id="historyScore" class="score"></span></h4>
+              <p id="historyNote" class="dim"></p>
+              <ul id="historyList"></ul>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="card limits">
+      <h2>What this cannot tell you</h2>
+      <ul>
+        <li><strong>One population.</strong> Every coda here is from clans EC1 and EC2 off Dominica.
+          Nothing generalises to sperm whales elsewhere.</li>
+        <li><strong>Annotation is not raw audio.</strong> The intervals were measured by researchers
+          from recordings, with tooling that changed over the 2005–2018 span. This page inherits
+          those decisions and cannot audit them.</li>
+        <li><strong>Rhythm is not meaning.</strong> Showing that coda timing carries clan identity
+          says nothing about whether whales intend it, perceive it, or use it referentially.</li>
+        <li><strong>Cross-domain comparison is about form, not function.</strong> Whale codas and
+          human drumming occupying different regions of an nPVI axis is a statement about interval
+          timing. It is not evidence that either is or is not language.</li>
+        <li><strong>Observations are not independent, and the tests mostly pretend they are.</strong>
+          Codas cluster by individual, by social unit and by recording session; drum windows
+          cluster by take and by drummer (up to 40 windows from one take, 675 takes, ~10
+          players). A permutation that shuffles individual codas or windows treats correlated
+          observations as independent and overstates precision — which is why the clan claim
+          carries a third null that permutes whole social units, and why its z falls from 71.9
+          to 4.5 when it does. The stratified-by-coda-type null and the cross-domain claims
+          have <em>not</em> been given clustered versions; read their p-values as upper bounds
+          on certainty, not as measurements of it.</li>
+        <li><strong>Multiple comparisons.</strong> Running every claim against every null is many
+          tests. The tool tracks them and reports Benjamini-Hochberg q-values, but those assume
+          independence and several of these tests share the same codas — so treat q as an
+          indication of cost, not a certified correction.</li>
+        <li><strong>Cross-species p-values are close to meaningless.</strong> Whale codas and human
+          drumming are not exchangeable under any null, so permuting their labels is guaranteed to
+          produce a tiny p before the data is seen. That comparison is carried by Cohen's d and by
+          the fact that both sides went through an identical pipeline at an identical window
+          length — not by its p-value.</li>
+      </ul>
+    </section>
+
+  </main>
+</div>
+
+<script type="module" src="js/observatory.js"></script>
+</body>
+</html>

@@ -188,7 +188,11 @@ input[type=checkbox] { accent-color: var(--accent, var(--c)); }
 .plot { position: relative; background: #070a0f; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; }
 .plot canvas { display: block; width: 100%; height: 78px; }
 .plot.tall canvas { height: 132px; }
-.plot.align canvas { height: 210px; }
+/* Fill the stretched grid cell rather than a fixed 210px. setup() in viz.js
+   reads clientHeight, so the drawing adapts, and main.js already redraws on
+   resize. min-height keeps it usable when the metrics column is short. */
+.plot.align { display: flex; }
+.plot.align canvas { height: 100%; min-height: 210px; }
 .plot-label {
   position: absolute; top: 4px; right: 7px; z-index: 1;
   font-family: var(--mono); font-size: 9px; color: var(--faint);
@@ -221,7 +225,9 @@ input[type=checkbox] { accent-color: var(--accent, var(--c)); }
 .compare-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 13px; }
 .compare-head h2 { font-size: 13px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--c); }
 
-.compare-grid { display: grid; grid-template-columns: minmax(260px, 1fr) 1.4fr; gap: 16px; align-items: start; }
+/* stretch, not start: the alignment plot should be the same height as the
+   metrics stack beside it so the two read as a matched pair of cards. */
+.compare-grid { display: grid; grid-template-columns: minmax(260px, 1fr) 1.4fr; gap: 16px; align-items: stretch; }
 @media (max-width: 900px) { .compare-grid { grid-template-columns: 1fr; } }
 
 .metrics { display: grid; gap: 10px; }
@@ -251,8 +257,15 @@ input[type=checkbox] { accent-color: var(--accent, var(--c)); }
 
 /* -------------------------------------------------------------- footer */
 
-footer { padding: 0 22px 26px; color: var(--faint); font-size: 11.5px; max-width: 940px; }
-footer p { margin: 0 0 6px; }
+/* Full-bleed, two columns. It was capped at 940px and stacked, so on a wide
+   screen it sat as a narrow ragged block under a full-width layout. */
+footer {
+  padding: 16px 22px 26px; color: var(--faint); font-size: 11.5px;
+  border-top: 1px solid var(--line); margin-top: 4px;
+  display: grid; grid-template-columns: 1fr 1fr; gap: 10px 32px; align-items: start;
+}
+footer p { margin: 0; max-width: 68ch; }
+@media (max-width: 900px) { footer { grid-template-columns: 1fr; } }
 footer .warn { color: #b08a8a; }
 footer .warn em { color: #d9b1b1; font-style: normal; font-weight: 600; }
 
@@ -262,7 +275,25 @@ footer .warn em { color: #d9b1b1; font-style: normal; font-weight: 600; }
 
 /* ------------------------------------------------------------ glossary */
 
-#glossaryBtn { align-self: center; font-family: var(--mono); font-size: 11px; }
+/* The glossary is the most useful thing in the top bar for a newcomer and it was
+   styled as the quietest — .ghost dim, 11px mono. Give it the weight of an
+   invitation: accent colour, bolder, a visible edge, and a hover that lifts. */
+#glossaryBtn {
+  align-self: center;
+  font-family: var(--sans);
+  font-size: 12.5px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: var(--c);
+  background: #1b1830;
+  border: 1px solid #3b3363;
+  border-radius: 6px;
+  padding: 7px 14px;
+  cursor: pointer;
+  transition: background 120ms ease, border-color 120ms ease, color 120ms ease;
+}
+#glossaryBtn:hover { background: #241f42; border-color: var(--c); color: #c9b8ff; }
+#glossaryBtn:focus-visible { outline: 2px solid var(--c); outline-offset: 2px; }
 #glossaryBtn:hover { color: var(--text); }
 
 body.g-lock { overflow: hidden; }

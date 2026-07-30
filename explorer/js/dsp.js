@@ -357,10 +357,25 @@ export function estimateIpi(signal, sampleRate, onsets, { minMs = 2, maxMs = 10,
   // window autocorrelates the *train* and reports the click interval as though
   // it were a multipulse interval. Clipping at the next onset is what a human
   // analyst does by hand: measure inside one click, not across several.
+  // ...and if there is NO next onset, the window cannot be bounded at all, so
+  // refuse rather than fall back to the full 20 ms.
+  //
+  // The `Infinity` that used to sit here defeated the paragraph above it. A
+  // dolphin burst pulse renders 40 clicks at 6->4 ms; spectral flux resolves
+  // only 1 of them, because at that rate the train has no recoverable per-click
+  // rising edge. With one onset there is no following onset to clip against, so
+  // the 20 ms window swallowed roughly four dolphin clicks and autocorrelation
+  // duly reported their ~6 ms spacing as an intra-click IPI — in 10 runs out of
+  // 10. Via Gordon (1991) that implies a sperm whale of about 13 m. The tool was
+  // fabricating a species, at its stated confidence, from a dolphin.
+  //
+  // A count-based guard (`onsets.length >= 2`) does NOT fix this: the bound
+  // depends on whether a *later* onset exists, not on how many there are, so
+  // hand-supplied onsets [t, t+0.4] still fabricate. The bound itself is the
+  // guard.
   const next = onsets.find((t) => t > best + 1e-6);
-  const available = next != null
-    ? Math.max(0, Math.round((next - best) * sampleRate) - 8)
-    : Infinity;
+  if (next == null) return null;
+  const available = Math.max(0, Math.round((next - best) * sampleRate) - 8);
 
   const start = Math.max(0, Math.round(best * sampleRate) - Math.round(0.001 * sampleRate));
   const segLen = Math.min(win, available);

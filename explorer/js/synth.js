@@ -12,6 +12,11 @@
 //   analyses. Move the IPI slider and watch the "pseudo-formants" move: that
 //   coupling is the point.
 
+// Every stochastic draw below goes through the seeded generator in random.js
+// rather than Math.random, so a given seed reproduces a given waveform exactly.
+// See that file for why.
+import { signed, random } from "./random.js";
+
 // --------------------------------------------------------------- filters
 
 // RBJ biquad bandpass, applied in place, direct form I.
@@ -67,7 +72,7 @@ export function clickGrain(sr, { durMs = 25, centerHz = 2000, q = 1.2, noise = 0
     const env = Math.exp(-i / tau);
     const tone = Math.sin(phase);
     phase += dp;
-    x[i] = env * (noise * (Math.random() * 2 - 1) + (1 - noise) * tone);
+    x[i] = env * (noise * signed() + (1 - noise) * tone);
   }
   bandpass(x, sr, centerHz, q);
   return normalize(x, 1.0);
@@ -93,7 +98,7 @@ function addNoiseFloor(out, sr, level) {
   if (level <= 0) return out;
   let b0 = 0, b1 = 0, b2 = 0;
   for (let i = 0; i < out.length; i++) {
-    const w = Math.random() * 2 - 1;
+    const w = signed();
     b0 = 0.99765 * b0 + w * 0.0990460;
     b1 = 0.96300 * b1 + w * 0.2965164;
     b2 = 0.57000 * b2 + w * 1.0526913;
@@ -110,7 +115,7 @@ export function renderCoda(sr, coda, { ipiMs = 5.5, tempoScale = 1, jitter = 0, 
   const times = [0];
   for (const frac of coda.iciNorm) {
     let step = frac * duration;
-    if (jitter > 0) step *= 1 + (Math.random() * 2 - 1) * jitter;
+    if (jitter > 0) step *= 1 + signed() * jitter;
     times.push(times[times.length - 1] + step);
   }
   const totalSec = times[times.length - 1] + tail;
@@ -244,10 +249,10 @@ export function renderAnimal(sr, a) {
     let t = 0;
     for (let i = 0; i < a.nClicks; i++) {
       times.push(t);
-      t += a.meanIci * (1 + (Math.random() * 2 - 1) * a.jitter);
+      t += a.meanIci * (1 + signed() * a.jitter);
     }
   } else if (a.kind === "random") {
-    for (let i = 0; i < a.nClicks; i++) times.push(Math.random() * a.span);
+    for (let i = 0; i < a.nClicks; i++) times.push(random() * a.span);
     times.sort((x, y) => x - y);
   }
   const totalSec = times[times.length - 1] + 0.35;

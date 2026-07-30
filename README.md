@@ -14,6 +14,51 @@ as results.
 
 ## What's here
 
+### [`explorer/observatory.html`](explorer/) — null models over the real coda corpus
+
+The part of this repo that works on **measured data**. Sharma et al. deposited
+the inter-click intervals behind their 2024 Nature Communications paper publicly,
+so the explorer's biggest documented limitation — "these are stylised
+realisations of coda notation, not ground truth" — is now removable. 8,112
+cleaned codas with clan, social unit, and individual labels.
+
+It is built around one result, and the result is a **null result**.
+
+Sperm whale clans EC1 and EC2 separate strongly in rhythm space (0.1287); a naive
+label permutation gives p < 0.0005, 43× the null. But two things are wrong with
+that test. EC1 is 65% coda type `1+1+3` while EC2 is 98% `5R3`, so the clans
+mostly differ in *which* codas they use. And clan is a property of a social unit,
+not of a coda — all 12 units are single-clan — so shuffling clan across 6,105
+individual codas treats correlated observations as independent.
+
+Control either one and the effect shrinks. Control **both at once** — remove each
+coda's coda-type mean, then permute clan across whole units — and it vanishes:
+
+| null | p |
+|---|---|
+| naive | 0.0005 |
+| stratified by coda type | 0.0005 |
+| by social unit | 0.0152 |
+| **both together** | **0.9630** |
+
+95% of random unit relabellings separate the clans *more* than the real split
+does. So the tool makes the null model the primary control, reports *explained by
+null* beside every p-value, and states which confounds each null does and does not
+handle.
+
+It also places coda rhythm on a shared axis with real human drumming: whale codas
+sit at nPVI 21.0 against 56–78 for human drummers measured through the identical
+pipeline (Cohen's d = −1.3 to −2.5), and 101 for a Poisson process. Coda type
+`5R3` is at 4.2 — very nearly a metronome.
+
+```bash
+python3 tools/fetch_corpus.py && python3 tools/fetch_comparanda.py
+cd explorer && python3 -m http.server 8777   # → /observatory.html
+```
+
+No data is committed: the Sharma deposit carries no LICENSE file, so everything
+is fetched on demand into gitignored paths.
+
 ### [`explorer/`](explorer/) — browser-based coda / rhythm / click comparison
 
 A zero-dependency web tool for putting sperm whale coda structure side by side
@@ -22,7 +67,7 @@ signals, and seeing what a rhythm metric and a timbre metric say about the pair.
 
 ```bash
 cd explorer && python3 -m http.server 8777   # → http://localhost:8777/
-npm test                                     # 84 + 23 assertions
+npm test                                     # 299 assertions, 4 suites
 ```
 
 It also carries a **glossary** (`◈ Glossary`, top bar): 75 entries covering the
@@ -39,6 +84,21 @@ recordings the moment you have them.
 detection, mel spectra, DTW. They are *not* WhAM embeddings and *not* Fréchet
 Audio Distance. See [`explorer/README.md`](explorer/README.md) for what it
 measures, what it cannot, and the documented limits of its IPI estimator.
+
+## Experiments run
+
+- [`00-device-equivalence`](experiments/00-device-equivalence/) — CPU vs MPS.
+  **Verdict: equivalent**, all four pre-registered criteria passed.
+- [`01-clan-rhythm-confound`](experiments/01-clan-rhythm-confound/) — is the
+  EC1/EC2 rhythm difference a dialect or a repertoire difference?
+  **Null result.** Controlling repertoire composition and unit-level
+  non-independence together gives p = 0.96, with 95% of null relabellings
+  producing a larger separation than the real one. Two earlier, weaker versions of
+  this conclusion are recorded alongside it rather than overwritten.
+- [`02-cross-domain-rhythm`](experiments/02-cross-domain-rhythm/) — where does
+  coda rhythm sit relative to human rhythm? **Below every human drumming style
+  measured** (nPVI 21.0 vs 56–78, Cohen's d −1.3 to −2.5), through an identical
+  pipeline at a matched window length.
 
 ## Planned experiments
 

@@ -1,0 +1,217 @@
+/* observatory.css — the Null Lab. Extends app.css; adds no fonts or assets.
+   Colour is never the only carrier of meaning: verdict levels also change their
+   left border weight and their label text, and the null plot marks the observed
+   value with a triangle as well as a hue. */
+
+.observatory {
+  --ok: #4ade80; --mid: #fbbf24; --bad: #f87171;
+
+  /* app.css's --faint (#5c6675) measures 3.33 / 3.12 / 2.94 against --bg /
+     --panel / --panel-2 — below WCAG AA (4.5:1) for normal text everywhere, and
+     below even the 3:1 large-text floor on --panel-2. It is used for footnotes,
+     captions and the limitations list, which on this page is precisely the text
+     carrying the caveats. Making the honest qualifications the least readable
+     thing on the screen is the wrong failure to ship, so this page overrides it.
+     #7d8998 measures 5.44 / 5.10 / 4.80 — AA on all three — while staying in the
+     same hue family so the visual hierarchy is unchanged.
+     Scoped to .observatory so the existing explorer is untouched. */
+  --faint: #7d8998;
+}
+
+.load-status { max-width: 640px; margin: 80px auto; padding: 24px; }
+.load-status h2 { font-size: 17px; margin-bottom: 10px; }
+.load-status pre {
+  background: var(--panel); border: 1px solid var(--line); border-radius: 6px;
+  padding: 12px 14px; font-family: var(--mono); font-size: 12.5px; overflow-x: auto;
+}
+.load-status .dim { color: var(--faint); font-size: 12px; }
+
+.obs-main { max-width: 1180px; margin: 0 auto; padding: 20px 22px 64px; }
+
+.thesis { padding: 4px 2px 22px; border-bottom: 1px solid var(--line); margin-bottom: 22px; }
+.thesis h2 { font-size: 20px; margin-bottom: 10px; letter-spacing: -0.02em; }
+.thesis p { margin: 0 0 10px; max-width: 76ch; }
+.thesis .dim { color: var(--dim); font-size: 13px; }
+
+.card {
+  background: var(--panel); border: 1px solid var(--line); border-radius: 10px;
+  padding: 20px 22px; margin-bottom: 20px;
+}
+.card > h2 { font-size: 16px; margin-bottom: 8px; }
+.lede { color: var(--dim); font-size: 13px; margin: 0 0 16px; max-width: 84ch; }
+.footnote { color: var(--faint); font-size: 12px; margin: 14px 0 0; max-width: 84ch; line-height: 1.55; }
+.caption { color: var(--faint); font-size: 12px; margin: 6px 0 14px; max-width: 84ch; }
+.warn-inline { color: var(--mid); }
+
+/* ------------------------------------------------------------- ladder */
+
+.ladder { display: flex; flex-direction: column; gap: 3px; }
+.lad-row { display: grid; grid-template-columns: 230px 1fr 68px; gap: 12px; align-items: center; font-size: 12.5px; }
+.lad-name { color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.lad-tier {
+  display: inline-block; margin-left: 6px; padding: 0 5px; border-radius: 3px;
+  font-size: 10px; text-transform: uppercase; letter-spacing: 0.04em;
+  background: var(--panel-2); color: var(--faint); border: 1px solid var(--line);
+}
+.lad-track { position: relative; height: 17px; background: var(--panel-2); border-radius: 3px; }
+.lad-bar { height: 100%; border-radius: 3px; background: var(--faint); }
+.lad-val { position: absolute; right: 6px; top: 1px; font-family: var(--mono); font-size: 11px; color: var(--text); }
+.lad-n { color: var(--faint); font-family: var(--mono); font-size: 11px; text-align: right; }
+
+/* whale rows are the subject; everything else is reference */
+.tier-whale .lad-bar, .tier-whale-all .lad-bar { background: var(--a); }
+.tier-whale-all .lad-name { font-weight: 600; }
+.tier-measured .lad-bar { background: var(--b); }
+.tier-exact-symbolic .lad-bar { background: var(--c); }
+.tier-control .lad-bar { background: #3a4152; }
+
+/* --------------------------------------------------------------- lab */
+
+.lab-grid { display: grid; grid-template-columns: 270px 1fr; gap: 22px; align-items: start; }
+.claim-col h3, .null-picker h3, .step h3 { font-size: 12px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--dim); margin-bottom: 8px; }
+
+#claimList { display: flex; flex-direction: column; gap: 6px; }
+.claim-btn {
+  text-align: left; background: var(--panel-2); border: 1px solid var(--line);
+  border-left: 3px solid transparent; border-radius: 6px; padding: 9px 11px;
+  color: var(--text); cursor: pointer; font: inherit; font-size: 12.5px; line-height: 1.35;
+}
+.claim-btn:hover { border-color: var(--faint); }
+.claim-btn.on { border-left-color: var(--a); background: #17202d; }
+.claim-btn:focus-visible { outline: 2px solid var(--a); outline-offset: 2px; }
+.claim-q { display: block; }
+.claim-n { display: block; margin-top: 3px; color: var(--faint); font-family: var(--mono); font-size: 11px; }
+
+.question { border-bottom: 1px solid var(--line); padding-bottom: 14px; margin-bottom: 14px; }
+.question h3 { font-size: 17px; text-transform: none; letter-spacing: -0.01em; color: var(--text); margin-bottom: 6px; }
+.question p { margin: 0 0 12px; color: var(--dim); font-size: 13px; max-width: 78ch; }
+
+dl.meta { display: flex; flex-wrap: wrap; gap: 8px 28px; margin: 0; }
+dl.meta div { min-width: 0; }
+dl.meta dt { font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--faint); }
+dl.meta dd { margin: 2px 0 0; font-size: 12.5px; }
+dl.meta dd.pred { color: var(--mid); max-width: 70ch; }
+dl.meta.ctx { margin-top: 10px; }
+dl.meta.ctx dd { font-family: var(--mono); font-size: 12px; }
+
+.null-tabs { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 8px; }
+.null-tab {
+  flex: 1 1 220px; text-align: left; background: var(--panel-2);
+  border: 1px solid var(--line); border-radius: 6px; padding: 9px 11px;
+  color: var(--text); cursor: pointer; font: inherit;
+}
+.null-tab:hover { border-color: var(--faint); }
+.null-tab.on { border-color: var(--a); background: #16212e; box-shadow: inset 0 0 0 1px var(--a); }
+.null-tab:focus-visible { outline: 2px solid var(--a); outline-offset: 2px; }
+.nt-label { display: block; font-size: 13px; font-weight: 600; }
+.nt-controls { display: block; margin-top: 2px; font-size: 11.5px; color: var(--dim); }
+.null-why { color: var(--dim); font-size: 12.5px; margin: 0 0 4px; max-width: 82ch; line-height: 1.55; }
+
+/* ------------------------------------------------------- predict step */
+
+.step { border-top: 1px solid var(--line); padding-top: 16px; margin-top: 16px; }
+.predict .dim { color: var(--dim); font-size: 12.5px; margin: 0 0 12px; max-width: 80ch; }
+.predict-choice { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 8px; margin-bottom: 14px; }
+.predict-choice button {
+  text-align: left; background: var(--panel-2); border: 1px solid var(--line);
+  border-radius: 6px; padding: 10px 12px; color: var(--text); cursor: pointer; font: inherit;
+}
+.predict-choice button:hover { border-color: var(--faint); }
+.predict-choice button.on { border-color: var(--c); background: #1c1a2b; box-shadow: inset 0 0 0 1px var(--c); }
+.predict-choice button:focus-visible { outline: 2px solid var(--c); outline-offset: 2px; }
+.predict-choice strong { display: block; font-size: 13px; font-weight: 600; }
+.predict-choice span { display: block; margin-top: 2px; font-size: 11.5px; color: var(--dim); font-family: var(--mono); }
+
+button.primary {
+  background: var(--a); color: #05121c; border: 0; border-radius: 6px;
+  padding: 9px 18px; font: inherit; font-weight: 600; cursor: pointer;
+}
+button.primary:disabled { background: var(--panel-2); color: var(--faint); cursor: not-allowed; }
+button.primary:focus-visible { outline: 2px solid var(--text); outline-offset: 2px; }
+
+/* -------------------------------------------------------- result step */
+
+.result:focus { outline: none; }
+
+.pred-feedback {
+  border-radius: 6px; padding: 11px 13px; margin-bottom: 14px; font-size: 13px;
+  border: 1px solid var(--line); background: var(--panel-2); line-height: 1.55;
+}
+/* A missed prediction is the informative case, not the failure case, so it gets
+   the accent that means "look here" rather than one that means "you erred". */
+.pred-feedback.hit { border-left: 3px solid var(--faint); }
+.pred-feedback.miss { border-left: 3px solid var(--c); }
+.pred-feedback strong { color: var(--text); }
+
+.verdict { border-radius: 6px; padding: 13px 15px; margin-bottom: 16px; background: var(--panel-2); border: 1px solid var(--line); }
+.verdict h3 { font-size: 15px; text-transform: none; letter-spacing: -0.01em; color: var(--text); margin-bottom: 5px; }
+.verdict p { margin: 0; font-size: 13px; color: var(--dim); line-height: 1.6; max-width: 82ch; }
+/* Border WEIGHT carries the level, so the scale reads without colour at all:
+   the heavier the rule, the more of the effect the null accounts for.
+
+   Hue deliberately does NOT run good-to-bad. An earlier version painted
+   "the null explains this" in --bad (red) and "it survives" in --ok (green),
+   which told the user that a disconfirmed hypothesis is a failure. That is the
+   opposite of what this tool is for — learning that your effect was a confound
+   is the most valuable outcome it can produce, and the interface should not
+   flinch at it. Both ends now use the same informational blue as the observed
+   marker in the plot; only --unclear differs, because "no answer" genuinely is
+   a different category from "an answer you did not expect". */
+.verdict.level-explained        { border-left: 5px solid var(--a); }
+.verdict.level-mostly-explained { border-left: 4px solid var(--a); }
+.verdict.level-partial          { border-left: 3px solid var(--a); }
+.verdict.level-survives         { border-left: 3px solid var(--a); }
+.verdict.level-unclear          { border-left: 3px solid var(--faint); }
+
+#nullPlot { width: 100%; display: block; background: #0d1219; border: 1px solid var(--line); border-radius: 6px; }
+
+table.stats { width: 100%; border-collapse: collapse; margin-bottom: 4px; }
+table.stats th {
+  text-align: left; font-weight: 500; color: var(--dim); font-size: 12.5px;
+  padding: 6px 10px 6px 0; border-bottom: 1px solid var(--line); white-space: nowrap;
+}
+table.stats td { padding: 6px 10px 6px 0; border-bottom: 1px solid var(--line); font-size: 12.5px; }
+table.stats td.num { font-family: var(--mono); color: var(--text); white-space: nowrap; }
+table.stats td.note { color: var(--faint); font-size: 11.5px; }
+table.stats tr:nth-child(3) td.num { color: var(--a); font-weight: 600; }
+
+.history { margin-top: 18px; border-top: 1px solid var(--line); padding-top: 14px; }
+.history h4 { margin: 0 0 4px; font-size: 12px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--dim); }
+.history .score { margin-left: 8px; font-family: var(--mono); color: var(--text); text-transform: none; letter-spacing: 0; }
+.history .dim { color: var(--faint); font-size: 12px; margin: 0 0 8px; }
+.history ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 3px; }
+.history li { font-size: 12px; color: var(--dim); }
+.history li .hm { display: inline-block; width: 1.2em; font-family: var(--mono); }
+.history li.hit .hm { color: var(--ok); }
+.history li.miss .hm { color: var(--c); }
+
+.limits ul { margin: 0; padding-left: 18px; }
+.limits li { font-size: 13px; color: var(--dim); margin-bottom: 7px; line-height: 1.55; max-width: 84ch; }
+.limits strong { color: var(--text); }
+
+@media (max-width: 900px) {
+  .lab-grid { grid-template-columns: 1fr; }
+  .lad-row { grid-template-columns: 150px 1fr 56px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * { transition: none !important; animation: none !important; }
+}
+
+/* ------------------------------------------------------- multiple comparisons */
+
+.multiplicity { margin-top: 18px; border-top: 1px solid var(--line); padding-top: 14px; }
+.multiplicity h4 { margin: 0 0 4px; font-size: 12px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--dim); }
+.multiplicity .dim { color: var(--faint); font-size: 12px; margin: 0 0 10px; max-width: 84ch; }
+table.mult thead th { color: var(--faint); font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; }
+table.mult td.num, table.mult th.num { text-align: right; font-family: var(--mono); }
+table.mult td em { color: var(--faint); font-style: normal; }
+
+/* The verdict must state which control it is a verdict against — otherwise two
+   different nulls can render the same headline and the page's central promise
+   ("switch it and watch the conclusion change") is invisible at the one place
+   the conclusion is stated. */
+.verdict-null {
+  margin: 0 0 8px; font-family: var(--mono); font-size: 11.5px;
+  color: var(--dim); letter-spacing: 0.01em;
+}
