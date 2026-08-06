@@ -104,13 +104,16 @@ def main():
     # certainly out of distribution for TIMBRE, and the codec encodes both into
     # the same tokens. The asacter arm exists to isolate that: real sperm whale
     # audio, matched on MEASURED input nPVI, so timbre is the only thing varying.
-    ap.add_argument("--source", choices=("synthetic", "asacter"), default="synthetic")
+    ap.add_argument("--source", choices=("synthetic", "coda", "asacter"), default="synthetic")
     args = ap.parse_args()
     masks, seeds, limit = MODES[args.mode]
 
     if args.source == "asacter":
         man_path, in_dir = ART / "manifest_asacter.json", ART / "inputs_asacter"
         hint = "./wham/.venv/bin/python tools/exp05_asacter_inputs.py"
+    elif args.source == "coda":
+        man_path, in_dir = ART / "manifest_coda.json", ART / "inputs_coda"
+        hint = "node tools/exp05_build_inputs.mjs --timbre coda"
     else:
         man_path, in_dir = ART / "manifest.json", ART / "inputs"
         hint = "node tools/exp05_build_inputs.mjs"

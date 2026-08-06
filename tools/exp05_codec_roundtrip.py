@@ -63,6 +63,7 @@ def main():
 
     for source, man_name, in_name in (
         ("synthetic", "manifest.json", "inputs"),
+        ("coda", "manifest_coda.json", "inputs_coda"),
         ("asacter", "manifest_asacter.json", "inputs_asacter"),
     ):
         mp = ART / man_name

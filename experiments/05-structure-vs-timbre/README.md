@@ -505,18 +505,61 @@ tokens. A model handed atypical tokens may fill in atypically for reasons that
 have nothing to do with its rhythm prior.
 
 **The ASACTER attempt did not resolve this** — see above. The codec cannot
-round-trip that material faithfully, so the arm measures reconstruction rather
-than prior. The finding therefore still reads: *given sparse conditioning from
-synthetic click trains that the codec reconstructs perfectly, output timing is
-irregular.* The codec transparency is now verified, which the earlier version of
-this section could not claim; the timbre question is not.
+round-trip that material, so the arm measured reconstruction rather than prior.
 
-What would settle it is real audio the codec can round-trip — annotated single
-codas rather than continuous click train. Nothing in this repo has that. The
-Sharma and Hersh corpora are ICI annotations with no audio, ASACTER has audio
-with no annotations, and DSWP's annotated audio is the gated part of the dataset.
-**That gap is the binding constraint on this experiment, and it is a property of
-what is publicly available rather than of the design.**
+### The coda-timbre arm — and the caveat does not survive it
+
+A third condition closes most of the gap without needing real audio: keep the
+rhythm **constructed** (so ground truth survives) and move the *timbre* toward
+the training distribution. `explorer/js/synth.js` already exports
+`spermWhaleClick` — a decaying 4-pulse train at 5.5 ms IPI, 6 kHz centre, the
+actual acoustic structure of a sperm whale click — against the generic 25 ms
+2 kHz `clickGrain` used above.
+
+Identical seed means **identical token patterns in both arms**, so the comparison
+isolates timbre exactly. Two things were checked before reading anything into it:
+
+- **The detector finds exactly 5 onsets in 140/140** coda-timbre inputs. The
+  grain's internal 5.5 ms structure is suppressed by the 30 ms `minIci` floor
+  rather than counted as onsets. Checked, not assumed — experiment 03 is the
+  story of assuming exactly this and being wrong.
+- **The codec round-trips it perfectly**: slope 1.000, r 0.9996, onsets 5.0 →
+  5.0, identical to the generic arm. Unlike ASACTER, this arm is transparent.
+
+On 11 matched inputs (token patterns verified identical):
+
+| mask | generic click | coda timbre | diff |
+|---|---|---|---|
+| 0.10 | 33.9 | 31.0 | −2.8 |
+| 0.20 | 45.8 | 34.8 | −11.0 |
+| 0.30 | 54.1 | 49.7 | −4.4 |
+| 0.40 | 62.2 | 63.3 | +1.1 |
+| 0.60 | 84.5 | 81.1 | −3.4 |
+| 0.80 | 89.6 | 86.4 | −3.1 |
+
+Output onset counts track too (5.1 → 8.8 generic against 5.0 → 8.9 coda).
+**Timbre does not change the result.** The rise from ~31 to ~87 happens with a
+generic broadband grain and with a sperm-whale-like multipulse grain alike.
+
+A wrong reading caught here and worth recording: the unmatched arms appeared to
+differ substantially (β 0.412 vs 0.052 at mask 0.6). That was an **input-set
+artifact** — the coda arm ran 20 inputs against the generic arm's 11, weighted
+differently along the nPVI axis. It vanishes on matched inputs. Comparing two
+arms on different input subsets is not comparing the arms.
+
+### What remains open
+
+The timbre question is substantially addressed, not closed. `spermWhaleClick` is
+much closer to a real click than a generic grain, but it is still **synthetic** —
+a clean multipulse train with no reverberation, no overlapping animals, no noise
+floor. Real recorded audio remains untestable through this chain because the
+codec cannot round-trip it.
+
+Settling it completely needs annotated single codas: audio the codec handles,
+with ground-truth ICIs. Nothing public has both. Sharma and Hersh are ICI
+annotations with no audio; ASACTER is audio with no annotations; DSWP's annotated
+audio is the gated part of the dataset. **That gap is a property of what is
+publicly available, not of this design.**
 
 Also not licensed: this tests **acoustic translation only**, one of the three
 surfaces in `CLAUDE.md`. Pseudocoda synthesis and the embeddings are separate

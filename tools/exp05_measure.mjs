@@ -50,8 +50,10 @@ function fit(pts) {
 // no ground-truth annotation for real recordings — so npviConstructed is null
 // there and only the measured-on-measured regression is defined.
 const isAsacter = mode.endsWith("_asacter");
-const man = JSON.parse(readFileSync(join(ART, isAsacter ? "manifest_asacter.json" : "manifest.json"), "utf8"));
-const IN_DIR = isAsacter ? "inputs_asacter" : "inputs";
+const isCoda = mode.endsWith("_coda");
+const man = JSON.parse(readFileSync(join(ART,
+  isAsacter ? "manifest_asacter.json" : isCoda ? "manifest_coda.json" : "manifest.json"), "utf8"));
+const IN_DIR = isAsacter ? "inputs_asacter" : isCoda ? "inputs_coda" : "inputs";
 const SR = man.meta.sampleRate;
 const byId = new Map(man.items.map((it) => [it.id, it]));
 

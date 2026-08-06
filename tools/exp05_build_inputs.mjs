@@ -22,16 +22,38 @@
 // manufactures nPVI 8.70 out of a perfectly even input — before the model does
 // anything. On-grid construction removes that exactly.
 
-import { writeFileSync, mkdirSync, rmSync } from "node:fs";
+import { writeFileSync, readFileSync, mkdirSync, rmSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 
+import { analyze } from "../explorer/js/dsp.js";
 import { npvi } from "../explorer/js/rhythm.js";
-import { clickGrain } from "../explorer/js/synth.js";
+import { clickGrain, spermWhaleClick } from "../explorer/js/synth.js";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const ART = join(HERE, "..", "experiments", "05-structure-vs-timbre", "artifacts");
-const IN_DIR = join(ART, "inputs");
+
+// --timbre generic (default) uses a plain click grain. --timbre coda uses
+// spermWhaleClick: a decaying 4-pulse train at 5.5 ms IPI, 6 kHz centre — the
+// actual acoustic structure of a sperm whale click.
+//
+// This exists because the ASACTER arm could not settle the timbre question:
+// the codec cannot round-trip dense real recordings (slope 0.307), so that arm
+// measured reconstruction, not the model prior. The coda-timbre arm keeps rhythm
+// CONSTRUCTED, so ground truth survives, while moving timbre toward the training
+// distribution. Identical seed means identical token patterns in both arms, so
+// the comparison isolates timbre exactly.
+const TIMBRE = (() => {
+  const i = process.argv.indexOf("--timbre");
+  const v = i >= 0 ? process.argv[i + 1] : "generic";
+  if (!["generic", "coda"].includes(v)) {
+    console.error(`--timbre must be generic or coda, got ${v}`);
+    process.exit(1);
+  }
+  return v;
+})();
+const SUFFIX = TIMBRE === "generic" ? "" : "_coda";
+const IN_DIR = join(ART, `inputs${SUFFIX}`);
 
 // ---------------------------------------------------------------------------
 // Measured constants — see G0 section 8. Not assumed.
@@ -68,7 +90,12 @@ function mulberry32(a) {
 }
 const rng = mulberry32(SEED);
 
-const GRAIN = clickGrain(SR, CLICK);
+// The multipulse grain carries internal 5.5 ms structure. The detector's 30 ms
+// minIci floor should suppress those as separate onsets, but experiment 03 is
+// exactly the story of assuming that and being wrong, so it is CHECKED below.
+const GRAIN = TIMBRE === "generic"
+  ? clickGrain(SR, CLICK)
+  : spermWhaleClick(SR, { ipiMs: 5.5, nPulses: 4, pulseDecay: 0.55, centerHz: 6000, q: 0.5, pulseDurMs: 1.1 });
 
 function render(icis) {
   const times = [0];
@@ -151,7 +178,10 @@ const meta = {
   sampleRate: SR,
   tokensPerSec: TOKENS_PER_SEC,
   frameMs: FRAME * 1000,
-  click: CLICK,
+  timbre: TIMBRE,
+  click: TIMBRE === "generic" ? CLICK
+    : { ipiMs: 5.5, nPulses: 4, pulseDecay: 0.55, centerHz: 6000, q: 0.5, pulseDurMs: 1.1 },
+  grainSamples: GRAIN.length,
   tailSec: TAIL_SEC,
   seed: SEED,
   constraints: {
@@ -167,9 +197,24 @@ const meta = {
   items: manifest.length,
   format: "raw float32 mono, little-endian, no header",
 };
-writeFileSync(join(ART, "manifest.json"), JSON.stringify({ meta, items: manifest }, null, 1));
+writeFileSync(join(ART, `manifest${SUFFIX}.json`), JSON.stringify({ meta, items: manifest }, null, 1));
 
-console.log("experiment 05 — stage 1, inputs");
+// Does the shipped detector still find exactly the constructed onsets, or does
+// the multipulse structure fool it into counting internal pulses?
+let exact = 0, onsetSum = 0;
+for (const m of manifest) {
+  const sig = new Float32Array(readFileSync(join(IN_DIR, `${m.id}.f32`)).buffer.slice(0));
+  const n = analyze(sig, SR).onsets.length;
+  onsetSum += n;
+  if (n === m.trueOnsets.length) exact++;
+}
+
+console.log(`experiment 05 — stage 1, inputs (timbre: ${TIMBRE})`);
+console.log(`  grain                          ${GRAIN.length} samples = ${(1000 * GRAIN.length / SR).toFixed(1)} ms`);
+console.log(`  detector finds exactly 5       ${exact}/${manifest.length}   mean onsets ${(onsetSum / manifest.length).toFixed(2)}`);
+if (exact < manifest.length * 0.9) {
+  console.log(`  WARNING: the grain's internal structure is being counted as onsets.`);
+}
 console.log(`  on-grid patterns enumerated   ${pool.length.toLocaleString()}`);
 console.log(`  written                        ${manifest.length} inputs -> ${IN_DIR}`);
 console.log(`  nPVI coverage`);
@@ -185,4 +230,4 @@ for (let b = 0; b < N_BANDS; b++) {
 const allD = manifest.map((m) => m.durSec);
 console.log(`  duration range                 ${Math.min(...allD).toFixed(2)}-${Math.max(...allD).toFixed(2)} s ` +
             `(real codas 0.5-3.04 s)`);
-console.log(`  manifest                       ${join(ART, "manifest.json")}`);
+console.log(`  manifest                       ${join(ART, `manifest${SUFFIX}.json`)}`);
