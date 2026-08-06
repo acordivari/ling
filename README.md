@@ -105,6 +105,21 @@ measures, what it cannot, and the documented limits of its IPI estimator.
   **Western North Pacific**: **24/24 returned values inside the 2–10 ms physical
   band**, spread 0.48 ms, implied body length 8.9–9.6 m. All three pre-registered
   criteria passed.
+- [`04-pacific-clan-rhythm`](experiments/04-pacific-clan-rhythm/) — experiment 01
+  said the clan-rhythm question needed a corpus with real repertoire overlap.
+  This is that corpus: **7 Pacific clans, 191 repertoires, 23 regions,
+  1978–2017**. The design blocker is gone — leverage 42–303 against Dominica's
+  33.3, detection floor 0.016–0.200 against ~0.40, negative control at nominal
+  rate. The result is the sequence, not the headline: **15 of 21 clan pairs
+  → 7 of 18 once region and year are matched → 3 of 21 under conservative
+  clustering → 2 of 13 under both jointly.** Every Palindrome result is recording
+  era (it was taped 2013–14 against everyone else's 1978–2003, zero overlapping
+  years). What survives everything is two pairs, Regular/Short and
+  Regular/Rapid-Increasing.
+  A side result with wider reach: the day-for-unit substitution that every
+  corpus without social-unit ids is forced into is **measurably
+  anti-conservative** — calibrated against Dominica, where both are known,
+  101 of 126 true-null splits shift *p* downward (sign test p = 5e-12).
 
 ## Planned experiments
 
@@ -159,11 +174,13 @@ The `explorer/` tool needs none of that.
 | corpus | what | basin | licence |
 |---|---|---|---|
 | Sharma et al. 2024 | 8,112 cleaned codas, annotated ICIs + clan/unit/individual | Caribbean (Dominica) | article CC BY 4.0; **the deposit itself has no LICENSE file** |
+| **Hersh et al. 2022** | 22,795 cleaned codas, ICIs + clan/repertoire/region/year/lat-lon, **7 clans, 191 repertoires, 23 regions, 1978–2017** | **Pacific** | article CC BY-NC-ND 4.0; **the [OSF deposit](https://osf.io/ae6pd/) declares no licence** |
 | **ASACTER** (Hualien Formosa Association & Turumoan Whale Watching) | 110 sperm whale records, 109 of them audio, 192 kHz, 26.2 min | **Western North Pacific (Taiwan)** | **[CC BY 4.0](https://creativecommons.org/licenses/by/4.0/) — redistributable**; [deposit](https://figshare.com/search?q=ASACTER), per-record DOIs under `10.6084/m9.figshare.*` |
 | Groove MIDI | 1,150 human drum performances | — | CC BY 4.0 |
 
 ```bash
-python3 tools/fetch_corpus.py          # coda ICIs
+python3 tools/fetch_corpus.py          # Dominica coda ICIs
+python3 tools/fetch_pacific.py         # Pacific coda ICIs (7 clans, 23 regions)
 python3 tools/fetch_comparanda.py      # human drumming + symbolic rhythms
 python3 tools/fetch_asacter.py         # ASACTER index + WAV header probe, no audio
 python3 tools/fetch_asacter.py --audio coda   # + 34 MB of coda-labelled audio
