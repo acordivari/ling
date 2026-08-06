@@ -315,7 +315,92 @@ so P0 and the regression share a point.
 
 ## Result
 
-*Model not yet run.*
+**Partial: gates run, mask boundary mapped, full sweep not yet run.** 11 inputs
+× 6 masks × 5 seeds = 330 generations. Checkpoints logged in
+`artifacts/gen_nsweep.json`; torch 2.7.1, MPS, 12 sampling steps.
+
+### P0 — passthrough: PASS
+
+```
+detector on the inputs   slope 0.999  r 0.9993      (G0 measured 0.986 / 0.9987)
+mask 0.20                beta 0.913   r 0.826
+input onsets 5.00 (constructed: 5)    output onsets 5.30, range 5-6, dead 0
+```
+
+The detector reading 0.999 here against G0's 0.986 on the same input spec is an
+independent consistency check on the whole chain.
+
+### N — seed variance, per mask
+
+The pre-registration ran N at **one** mask. That was an error: mask 0 copies the
+input and mask 1 generates unconditionally, so validity is mask-dependent by
+construction. Recorded as an amendment, not folded in silently.
+
+| mask | within SD | between SD | ratio | |
+|---|---|---|---|---|
+| 0.10 | 11.26 | 22.96 | **0.490** | pass |
+| 0.20 | 28.98 | 20.58 | 1.408 | FAIL |
+| 0.30 | 31.43 | 23.74 | 1.324 | FAIL |
+| 0.40 | 37.05 | 21.27 | 1.742 | FAIL |
+| 0.60 | 37.62 | 15.85 | 2.373 | FAIL |
+| 0.80 | 35.01 | 11.35 | 3.085 | FAIL |
+
+**A single generation is input-driven only at mask 0.10.** Above that, the seed
+matters more than the input.
+
+### β, seed-averaged, bootstrap CI over inputs
+
+N asks whether *one generation* is input-driven. That is not the same question as
+whether the *slope* is estimable — averaging k seeds shrinks the sampling
+component by √k and leaves the input-driven component alone. Reported explicitly
+rather than letting N stand in for it. **This does not relax the gate.**
+
+| mask | β | 95% CI | r | excludes 0 | excludes 1 |
+|---|---|---|---|---|---|
+| 0.10 | 1.127 | [0.92, 1.39] | 0.963 | yes | **no** |
+| 0.20 | 0.911 | [0.64, 1.27] | 0.868 | yes | **no** |
+| 0.30 | 0.827 | [0.39, 1.43] | 0.683 | yes | **no** |
+| 0.40 | 0.782 | [0.39, 1.34] | 0.721 | yes | **no** |
+| 0.60 | 0.052 | [−0.51, 0.59] | 0.065 | **no** | yes |
+| 0.80 | −0.132 | [−0.39, 0.25] | −0.229 | **no** | yes |
+
+Bootstrap resamples **inputs**, the unit of independence, not generations.
+
+**A sharp transition between mask 0.4 and 0.6.** Below it, β is significantly
+above 0 and *indistinguishable from 1* — input rhythm passes through. Above it,
+β is indistinguishable from 0 and significantly below 1 — input rhythm is gone.
+
+### Click count is not preserved either
+
+| mask | output onsets, mean | range | exactly 5 (= input) |
+|---|---|---|---|
+| 0.10 | 5.09 | 5–6 | 91% |
+| 0.20 | 5.25 | 5–6 | 75% |
+| 0.30 | 5.53 | 5–8 | 56% |
+| 0.40 | 5.75 | 5–9 | 47% |
+| 0.60 | 6.78 | 4–11 | 20% |
+| 0.80 | 8.76 | 3–16 | 5% |
+
+### Reading this — and what it does NOT yet license
+
+The β curve alone is close to trivial at both ends: at low mask most tokens are
+copied, at high mask most are generated. **The informative question is what the
+outputs look like where the input no longer controls them**, and the honest
+answer is that this is not yet established.
+
+Mean output nPVI rises monotonically with mask: 33.9, 45.8, 54.1, 62.3, 84.5,
+89.6. Real codas are nPVI 18.1 (Pacific) / 21.0 (Dominica). Taken at face value
+that says WhAM does **not** converge on coda-like rhythm when the input stops
+constraining it — the opposite of the grammar prediction.
+
+**That reading is not safe yet.** Output onset density rises with mask over the
+same range (5.09 → 8.76 onsets in a fixed duration), so intervals get shorter, and
+G0 established that this detector *inflates* nPVI at short intervals — a 60 ms
+isochronous train reads 13.06 instead of 0. The nPVI rise and the density rise are
+confounded, and separating them is the next piece of work, not a caveat to
+mention and move past.
+
+So: **the transition is established; what lies above it is not.**
 
 ## What this will and will not license
 
