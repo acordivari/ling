@@ -21,6 +21,7 @@ absorbing.
 import csv
 import json
 import os
+import re
 import sys
 import subprocess
 import urllib.request
@@ -51,6 +52,29 @@ def npvi(x):
         return None
     return 100 * sum(abs(a - b) / ((a + b) / 2)
                      for a, b in zip(x, x[1:])) / (len(x) - 1)
+
+
+def parse_date(s):
+    """Normalise the Date column to an ISO day key, or None.
+
+    An earlier version of this file omitted Date entirely, with the note
+    "mixes bare years with DD-MM-YYYY; unsafe to parse". That was measured
+    again and is wrong: all 8,719 rows are DD/MM/YYYY or DD-MM-YYYY and none
+    is a bare year. Day-first is unambiguous — 3,907 rows have a first field
+    above 12 and none has a second field above 12.
+
+    The day key exists because it is the only available stand-in for a social
+    unit in corpora that lack unit ids (see tools/cluster_calibration.mjs).
+    Here, where Unit IS known, the two can be compared directly.
+    """
+    s = (s or "").strip().replace("-", "/")
+    m = re.fullmatch(r"(\d{1,2})/(\d{1,2})/(\d{4})", s)
+    if not m:
+        return None
+    d, mo, y = int(m.group(1)), int(m.group(2)), int(m.group(3))
+    if not (1 <= d <= 31 and 1 <= mo <= 12):
+        return None
+    return f"{y:04d}-{mo:02d}-{d:02d}"
 
 
 def download():
@@ -120,7 +144,8 @@ def clean(rows):
             dropped["ici_sum_vs_duration"] += 1
             continue
         codas.append({"icis": icis, "type": ct, "clan": r["Clan"],
-                      "unit": r["Unit"], "idn": r["IDN"]})
+                      "unit": r["Unit"], "idn": r["IDN"],
+                      "date": parse_date(r.get("Date"))})
     return codas, dropped
 
 
@@ -137,9 +162,11 @@ def main():
     types = sorted({c["type"] for c in codas})
     clans = sorted({c["clan"] for c in codas})
     units = sorted({c["unit"] for c in codas})
+    dates = sorted({c["date"] for c in codas if c["date"]})
     ti = {t: i for i, t in enumerate(types)}
     ci = {t: i for i, t in enumerate(clans)}
     ui = {t: i for i, t in enumerate(units)}
+    di = {t: i for i, t in enumerate(dates)}
 
     # Measure the quantisation cost rather than trusting it.
     worst = 0.0
@@ -190,17 +217,28 @@ def main():
             "idn_ambiguous_examples": ["6070/6068", "5981/5978", "59871?"],
             "codas_with_certain_individual": sum(1 for c in codas if certain(c["idn"])),
             "unit_ZZZ_is_unknown_sentinel": True,
-            "date_column_omitted": "mixes bare years with DD-MM-YYYY; unsafe to parse",
+            "date_column": (
+                "Parsed to an ISO day key. A previous version of this tool "
+                "omitted it as 'mixes bare years with DD-MM-YYYY; unsafe to "
+                "parse'. Re-measured: all 8,719 rows are DD/MM/YYYY or "
+                "DD-MM-YYYY, none is a bare year, and day-first is unambiguous "
+                "(3,907 rows have a first field > 12, none has a second > 12)."),
+            "codas_with_unparseable_date": sum(1 for c in codas if not c["date"]),
+            "recording_day_is_not_a_social_unit": (
+                "Both are present here, which is why this corpus can calibrate "
+                "the day-for-unit substitution that corpora without unit ids "
+                "are forced into. See tools/cluster_calibration.mjs."),
             "single_clan_caveat": (
                 "EC1 and EC2 only, off Dominica. Nothing here generalises to other "
                 "sperm whale populations."),
         },
         "ici_units": f"integer 1/{SCALE} s",
         "quantisation_worst_npvi_error": round(worst, 4),
-        "types": types, "clans": clans, "units": units,
+        "types": types, "clans": clans, "units": units, "dates": dates,
         "codaType": [ti[c["type"]] for c in codas],
         "clan": [ci[c["clan"]] for c in codas],
         "unit": [ui[c["unit"]] for c in codas],
+        "date": [di[c["date"]] if c["date"] else -1 for c in codas],
         "idn": [c["idn"] for c in codas],
         "idnCertain": [1 if certain(c["idn"]) else 0 for c in codas],
         "ici": [[int(round(v * SCALE)) for v in c["icis"]] for c in codas],
