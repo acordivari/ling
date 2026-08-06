@@ -288,6 +288,24 @@ def _subsample(vals, k, seed=12345):
     return [round(v, 3) for v in random.Random(seed).sample(list(vals), k)]
 
 
+def _subsample_windows(wins, k, seed=6789):
+    """Seeded subsample of the raw ICI windows themselves.
+
+    `npviSample` below is a sample of nPVI *values*. This is a sample of the
+    *intervals* those values were computed from, which is what a consumer needs
+    when it has to re-render the rhythm as audio rather than re-analyse the
+    statistic.
+
+    Added for experiment 05's G0 gate, which synthesises click trains from real
+    drum microtiming and checks that the shipped onset detector recovers the
+    intervals that were put in. A summary statistic cannot be re-rendered.
+    """
+    src = list(wins)
+    if len(src) > k:
+        src = random.Random(seed).sample(src, k)
+    return [[round(v, 5) for v in w] for w in src]
+
+
 def summarise(name, tier, wins, note=""):
     vals = [v for v in (npvi(w) for w in wins) if v is not None]
     cvs = [v for v in (cv(w) for w in wins) if v is not None]
@@ -314,6 +332,9 @@ def summarise(name, tier, wins, note=""):
         # across the full sorted distribution instead, so the sample mean tracks
         # the population mean by construction.
         "npviSample": _subsample(vals, 400),
+        # The intervals themselves, for consumers that must RE-RENDER the rhythm
+        # rather than re-analyse the statistic. See _subsample_windows.
+        "iciSample": _subsample_windows(wins, 200),
     }
 
 

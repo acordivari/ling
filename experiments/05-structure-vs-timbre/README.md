@@ -1,8 +1,14 @@
 # 05 — Did WhAM learn a timbre or a grammar?
 
-**Status: PRE-REGISTRATION. NOT YET RUN.** Everything below the Result heading is
-empty on purpose. This file exists to fix the design before any GPU time is
-spent, per the `CLAUDE.md` convention that the control condition is stated first.
+**Status: PRE-REGISTRATION, GATES RUN 2026-08-06. Model not yet run.**
+
+- **G1 (device) PASSES.** Re-verified against torch 2.7.1; every metric
+  reproduces the 2026-07-28 baseline bit-for-bit.
+- **G0 (measurement chain) FAILED as pre-registered**, and the failure was in
+  the direction that would have manufactured this experiment's headline result.
+  An amendment was found — to the *inputs*, not the instrument. See below.
+
+The Result section is still empty on purpose.
 
 Implements the experiment `CLAUDE.md` lists as planned #2 and flags as the
 highest information-per-GPU-hour of the set.
@@ -170,9 +176,111 @@ and it would be the more interesting of the two.
 Stated in advance because "the outputs sounded whale-like" is exactly the
 judgement that is easy to make after listening.
 
+## Gate results
+
+### G1 — device: PASS
+
+`experiments/00-device-equivalence/check.py`, re-run 2026-08-06 against torch
+2.7.1. Every metric reproduces the 2026-07-28 baseline to eight significant
+figures: decode SNR 107.767 dB, top-1 agreement 100.00%, max logit diff 8.46e-05,
+P3 ratio 0.878, all 14 codebooks 100%. Verdict EQUIVALENT.
+
+Cross-device mel distance (0.00282) is *below* within-device (0.00321), so device
+variation is smaller than the sampler's own seed-to-seed noise floor. MPS is
+~2.2× faster than CPU (48.9 s vs 1:48.5 for 12 generations).
+
+### G0 — measurement chain: FAIL, then amended
+
+```
+source                n  nPVI in  nPVI out    bias  recall   miss   spur  <floor
+isochronous          20     0.00      0.02    0.02    100%   0.00   0.00    0.00
+coda 5R3             20     0.00      0.02    0.02    100%   0.00   0.00    0.00
+coda, Pacific        20    16.83     17.58    0.74    100%   0.00   0.00    0.00
+coda, Dominica       20    22.09     22.33    0.24    100%   0.00   0.00    0.00
+drumming (Groove)    20    71.65     58.26  -13.39     95%   0.25   0.00    0.30
+Morse (ITU)          20    49.84     51.40    1.55    100%   0.00   0.00    0.00
+Poisson              20    96.17     78.00  -18.17     93%   0.35   0.00    0.40
+
+G0a  r 0.9185  [>= 0.95]  FAIL      slope 0.7742  [0.90-1.10]  FAIL
+G0b  worst bias 18.17  [< 5]  FAIL
+```
+
+**This is the failure the gate existed to catch.** Bias is ~0 for everything
+coda-like and strongly negative for the two high-nPVI sources. A detector that is
+accurate near coda rhythm and compressive away from it produces β ≈ 0.77 —
+the "grammar" result — **with no model involved**. Run without this gate, the
+experiment would have measured its own instrument and concluded that WhAM had
+internalised coda structure.
+
+**Mechanism.** Not the detector's `minIci` floor: results are *identical* at
+20/15/10/5 ms. The onset function runs on 512-sample frames (11.6 ms) and onset
+times are quantised on a 128-sample hop (2.90 ms), so a few ms of jitter corrupts
+nPVI in proportion to the interval — and nPVI is a difference of *adjacent*
+intervals, which amplifies it. Four remedies were measured:
+
+| remedy | outcome |
+|---|---|
+| retempo so every interval clears the floor | criteria met, but inputs run to 7.7 s — outside the 0.5–3.04 s coda range |
+| lower `minIci` | saturates below 20 ms; never passes |
+| slow everything uniformly | slope/r pass from 400 ms, bias plateaus at 5.6–6.3, never < 5 |
+| restrict to nPVI ≤ 50 | bias 1.26–1.55, passes — but loses the informative inputs |
+
+**The amendment: the fault was in the input sourcing, not the instrument.**
+
+High nPVI and short absolute intervals are different properties, and the
+pre-registration conflated them — real drum performances and a Poisson process
+happen to have both. An alternating sequence `[a,b,a,b]` has
+nPVI = 100·|a−b| / ((a+b)/2), so for target *N* and shortest interval *b*,
+a = b(2+r)/(2−r) with r = N/100. **The whole nPVI range is constructible at any
+minimum interval.**
+
+At a **200 ms shortest interval**:
+
+```
+ target     a/b (ms)    dur  nPVI in  nPVI out    bias
+      0      200/200  0.80s     0.00      0.02    0.02
+     20      244/200  0.89s    20.00     18.81   -1.19
+     40      300/200  1.00s    40.00     42.08    2.08
+     60      371/200  1.14s    60.00     59.87   -0.13
+     80      467/200  1.33s    80.00     79.05   -0.95
+    100      600/200  1.60s   100.00     99.27   -0.73
+    120      800/200  2.00s   120.00    121.83    1.83
+
+slope 1.0059   r 0.9996   worst bias 2.08   recall 100%   spurious 0
+```
+
+Full nPVI 0–120, every input inside the real coda duration range (max 2.00 s
+against the 3.04 s measured maximum), no spurious onsets.
+
+### What the amendment costs
+
+Experiment 05 now tests **constructed** rhythms, not real drum microtiming. That
+is a real loss of ecological validity and it must be stated in any result: the
+claim becomes "structure at nPVI *N*" rather than "a rock groove". The
+`iciSample` windows added to `comparanda.json` remain available for a secondary
+arm, but only at nPVI ≤ 50 where the instrument is linear.
+
+### Amended input table
+
+Replaces the seven sources above. Shortest interval fixed at 200 ms throughout.
+
+| target nPVI | a/b (ms) | duration | note |
+|---|---|---|---|
+| 0 | 200/200 | 0.80 s | isochronous floor |
+| 20 | 244/200 | 0.89 s | ≈ real coda nPVI (18.1 Pacific / 21.0 Dominica) |
+| 40 | 300/200 | 1.00 s | |
+| 60 | 371/200 | 1.14 s | ≈ human drumming range |
+| 80 | 467/200 | 1.33 s | |
+| 100 | 600/200 | 1.60 s | ≈ Poisson |
+| 120 | 800/200 | 2.00 s | above any measured natural source |
+
+n = 20 per target, jittered within target, 3 seeds each. The nPVI = 20 row is the
+passthrough anchor: it sits where real codas sit, so P0 and the regression share
+a point.
+
 ## Result
 
-*Not yet run.*
+*Model not yet run.*
 
 ## What this will and will not license
 
