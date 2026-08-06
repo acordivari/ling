@@ -166,8 +166,10 @@ the model is closer to a timbre than a grammar.
 
 Reasoning: the codec is time-aligned and masked resampling operates on
 time-aligned tokens, so gross timing is largely carried by whatever tokens are
-left unmasked. *(The codec frame rate has not been verified in this repo and must
-be measured before the run — the reasoning depends on it.)*
+left unmasked. **The frame rate is now measured: 17.241 ms (58 tokens/s).** The
+shortest interval in the input spec is 12 tokens, so every interval is resolved
+by roughly an order of magnitude — the reasoning holds, and the prediction stands
+as written.
 
 What would falsify it: β ≤ 0.5 with outputs converging on ~20 nPVI regardless of
 whether the input was isochronous or Poisson. That would be the grammar result,
@@ -260,23 +262,56 @@ claim becomes "structure at nPVI *N*" rather than "a rock groove". The
 `iciSample` windows added to `comparanda.json` remain available for a secondary
 arm, but only at nPVI ≤ 50 where the instrument is linear.
 
-### Amended input table
+### A second quantiser: the codec's own token grid
 
-Replaces the seven sources above. Shortest interval fixed at 200 ms throughout.
+Measured from the loaded model, not assumed — this is the figure the prediction
+below depends on:
 
-| target nPVI | a/b (ms) | duration | note |
-|---|---|---|---|
-| 0 | 200/200 | 0.80 s | isochronous floor |
-| 20 | 244/200 | 0.89 s | ≈ real coda nPVI (18.1 Pacific / 21.0 Dominica) |
-| 40 | 300/200 | 1.00 s | |
-| 60 | 371/200 | 1.14 s | ≈ human drumming range |
-| 80 | 467/200 | 1.33 s | |
-| 100 | 600/200 | 1.60 s | ≈ Poisson |
-| 120 | 800/200 | 2.00 s | above any measured natural source |
+| | |
+|---|---|
+| `Interface.s2t(1.0)` | **58 tokens/s → 17.241 ms per token** |
+| codec `sample_rate` | 44100 Hz — same as this measurement chain |
+| `coarse.chunk_size_s` | 10 s |
+| `c2f.chunk_size_s` | 3 s |
 
-n = 20 per target, jittered within target, 3 seeds each. The nPVI = 20 row is the
-passthrough anchor: it sits where real codas sit, so P0 and the regression share
-a point.
+WhAM cannot represent an onset off its own token grid, so the grid caps how
+faithfully *any* input rhythm can survive before the model does anything.
+
+The section-7 amendment (200 ms shortest interval) fails on it. 200 ms is
+**11.6 tokens**, so an isochronous train alternates 11/12 tokens and the grid
+**manufactures nPVI 8.70 out of a perfectly even input** — the grammar-result
+direction for a third time, from the codec on this occasion.
+
+Making every interval an integer token count removes it exactly.
+
+### Final input specification
+
+Shortest interval = **12 tokens = 206.9 ms**. Every interval an integer token
+count. The *achieved* nPVI replaces the nominal target, since rounding to the
+grid moves it slightly.
+
+| achieved nPVI | a/b (tokens) | a/b (ms) | duration | detector bias |
+|---|---|---|---|---|
+| 0.00 | 12/12 | 207/207 | 0.83 s | +4.61 |
+| 22.22 | 15/12 | 259/207 | 0.93 s | −1.83 |
+| 40.00 | 18/12 | 310/207 | 1.03 s | +2.24 |
+| 58.82 | 22/12 | 379/207 | 1.17 s | +0.46 |
+| 80.00 | 28/12 | 483/207 | 1.38 s | +1.61 |
+| 100.00 | 36/12 | 621/207 | 1.66 s | +2.89 |
+| 120.00 | 48/12 | 828/207 | 2.07 s | −0.80 |
+
+```
+codec grid          EXACT (0.000)
+onset detector      slope 0.9860   r 0.9987   worst bias 4.61   recall 100%   spurious 0
+```
+
+Both quantisers clear. The worst detector bias is the isochronous row (+4.61,
+against a threshold of 5) and it is residual onset jitter, so **nPVI ≈ 0 is the
+least trustworthy point on the axis** and should not carry the regression alone.
+
+n = 20 per target, jittered within target, 3 seeds each. The 22.22 row is the
+passthrough anchor — it sits where real codas sit (18.1 Pacific / 21.0 Dominica),
+so P0 and the regression share a point.
 
 ## Result
 

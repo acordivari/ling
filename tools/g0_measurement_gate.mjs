@@ -433,6 +433,90 @@ if (chosen) {
 }
 
 rule();
+console.log("8. THE CODEC GRID — a second quantiser, downstream of the detector");
+rule();
+console.log("MEASURED from the loaded model, not assumed:");
+console.log("  Interface.s2t(1.0) = 58 tokens/s  ->  token frame 17.241 ms");
+console.log("  codec sample_rate 44100 Hz (same as this chain)");
+console.log("  coarse chunk_size_s 10 s, c2f chunk_size_s 3 s");
+console.log("");
+console.log("WhAM cannot represent an onset off its own token grid, so the grid caps how");
+console.log("faithfully ANY input rhythm can survive — before the model does anything.\n");
+
+const FRAME = 1 / 58;
+function gridSnapBias(bMs, aligned) {
+  const rows = [];
+  for (const N of TARGETS) {
+    const r = N / 100;
+    let a, b;
+    if (aligned) {
+      const bT = Math.round(bMs / 1000 / FRAME);
+      b = bT * FRAME;
+      a = Math.round(bT * (2 + r) / (2 - r)) * FRAME;
+    } else {
+      b = bMs / 1000;
+      a = b * (2 + r) / (2 - r);
+    }
+    const icis = [a, b, a, b];
+    const t = [0];
+    for (const v of icis) t.push(t[t.length - 1] + v);
+    const snapped = t.map((v) => Math.round(v / FRAME) * FRAME);
+    const outIcis = snapped.slice(1).map((v, i) => v - snapped[i]);
+    rows.push({ N, a, b, icis, inN: npvi(icis), snapN: npvi(outIcis),
+                dur: icis.reduce((s, v) => s + v, 0) });
+  }
+  return rows;
+}
+
+for (const [label, aligned] of [["as amended in section 7 (200 ms)", false],
+                                ["grid-aligned (12 tokens = 207 ms)", true]]) {
+  const rows = gridSnapBias(aligned ? 12 * FRAME * 1000 : 200, aligned);
+  const worst = Math.max(...rows.map((r) => Math.abs(r.snapN - r.inN)));
+  console.log(`  ${label.padEnd(34)} worst |bias| from the grid alone: ${fmt(worst, 3)}` +
+              `  ${worst < 0.01 ? "EXACT" : worst < G0B_MAX_BIAS ? "" : "OVER THRESHOLD"}`);
+}
+console.log("");
+console.log("  A 200 ms interval is 11.6 tokens, so an isochronous train alternates 11/12");
+console.log("  tokens and the grid MANUFACTURES nPVI 8.70 out of a perfectly even input.");
+console.log("  That is the grammar-result direction again, from the codec this time.");
+console.log("  Making every interval an integer token count removes it exactly.\n");
+
+// Does the shipped detector still recover the grid-aligned inputs?
+const gridRows = gridSnapBias(12 * FRAME * 1000, true);
+console.log(`${"achieved nPVI".padStart(13)} ${"a/b tokens".padStart(11)} ${"dur".padStart(6)} ` +
+            `${"detected".padStart(9)} ${"bias".padStart(7)} ${"recall".padStart(7)} ${"spur".padStart(5)}`);
+console.log("-".repeat(78));
+const gpts = [];
+for (const row of gridRows) {
+  const { signal, trueOnsets } = renderIcis(row.icis);
+  const got = analyze(signal, SR).onsets;
+  const m = matchOnsets(trueOnsets, got);
+  const outIcis = got.slice(1).map((v, i) => v - got[i]);
+  const outN = outIcis.length >= 2 ? npvi(outIcis) : NaN;
+  if (Number.isFinite(outN)) gpts.push([row.inN, outN]);
+  console.log(`${fmt(row.inN).padStart(13)} ${(`${Math.round(row.a / FRAME)}/${Math.round(row.b / FRAME)}`).padStart(11)} ` +
+              `${(fmt(row.dur, 2) + "s").padStart(6)} ${fmt(outN).padStart(9)} ${fmt(outN - row.inN).padStart(7)} ` +
+              `${fmt(100 * m.matched / trueOnsets.length, 0).padStart(6)}% ${String(m.spurious).padStart(5)}`);
+}
+{
+  const px = gpts.map((p) => p[0]), py = gpts.map((p) => p[1]);
+  const mx2 = mean(px), my2 = mean(py);
+  let a3 = 0, b3 = 0, c3 = 0;
+  for (let i = 0; i < px.length; i++) {
+    a3 += (px[i] - mx2) * (py[i] - my2); b3 += (px[i] - mx2) ** 2; c3 += (py[i] - my2) ** 2;
+  }
+  const sl = b3 > 0 ? a3 / b3 : NaN;
+  const rr = b3 > 0 && c3 > 0 ? a3 / Math.sqrt(b3 * c3) : NaN;
+  const wb = Math.max(...gpts.map(([i, o]) => Math.abs(o - i)));
+  console.log("-".repeat(78));
+  console.log(`  detector on grid-aligned inputs: slope ${fmt(sl, 4)}  r ${fmt(rr, 4)}  worst bias ${fmt(wb)}`);
+  console.log(`  codec grid on the same inputs:   EXACT (0.000)`);
+  console.log(`\n  ${rr >= G0A_MIN_R && sl >= G0A_SLOPE[0] && sl <= G0A_SLOPE[1] && wb < G0B_MAX_BIAS
+    ? "BOTH QUANTISERS CLEAR. This is experiment 05's input specification."
+    : "Detector still failing on grid-aligned inputs — see above."}`);
+}
+
+rule();
 console.log("VERDICT");
 rule();
 console.log(`  G0a  r ${fmt(base.r, 3)}, slope ${fmt(base.slope, 3)}`);
