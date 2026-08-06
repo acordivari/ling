@@ -61,6 +61,10 @@ MODES = {
     # mask and beta reported only where it passes. This maps the boundary before
     # committing to a full-size sweep.
     "nsweep": ([0.1, 0.2, 0.3, 0.4, 0.6, 0.8], [0, 1, 2, 3, 4], 20),
+    # csweep — the same mask grid as nsweep at 3 seeds instead of 5. Used for the
+    # asacter arm, where the comparison is between MEAN output-vs-mask curves at
+    # matched input nPVI, which 3 seeds estimate adequately.
+    "csweep": ([0.1, 0.2, 0.3, 0.4, 0.6, 0.8], [0, 1, 2], 20),
     "sweep": ([0.2, 0.4, 0.6, 0.8, 0.95], [0, 1, 2], None),
 }
 
@@ -96,12 +100,22 @@ def seed_all(s):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--mode", choices=sorted(MODES), required=True)
+    # The synthetic arm is in distribution for RHYTHM by construction but almost
+    # certainly out of distribution for TIMBRE, and the codec encodes both into
+    # the same tokens. The asacter arm exists to isolate that: real sperm whale
+    # audio, matched on MEASURED input nPVI, so timbre is the only thing varying.
+    ap.add_argument("--source", choices=("synthetic", "asacter"), default="synthetic")
     args = ap.parse_args()
     masks, seeds, limit = MODES[args.mode]
 
-    man_path = ART / "manifest.json"
+    if args.source == "asacter":
+        man_path, in_dir = ART / "manifest_asacter.json", ART / "inputs_asacter"
+        hint = "./wham/.venv/bin/python tools/exp05_asacter_inputs.py"
+    else:
+        man_path, in_dir = ART / "manifest.json", ART / "inputs"
+        hint = "node tools/exp05_build_inputs.mjs"
     if not man_path.exists():
-        sys.exit(f"missing {man_path}\n  run: node tools/exp05_build_inputs.mjs")
+        sys.exit(f"missing {man_path}\n  run: {hint}")
     man = json.loads(man_path.read_text())
     meta, items = man["meta"], man["items"]
     SR = meta["sampleRate"]
@@ -116,11 +130,12 @@ def main():
     from vampnet.mask import linear_random
 
     iface = load_interface()
-    out_dir = ART / f"out_{args.mode}"
+    tag = args.mode if args.source == "synthetic" else f"{args.mode}_{args.source}"
+    out_dir = ART / f"out_{tag}"
     out_dir.mkdir(parents=True, exist_ok=True)
 
     total = len(items) * len(masks) * len(seeds)
-    print(f"experiment 05 — stage 2, generation ({args.mode})")
+    print(f"experiment 05 — stage 2, generation ({args.mode}, {args.source})")
     print(f"  device {DEVICE}   sampling_steps {SAMPLING_STEPS}")
     print(f"  {len(items)} inputs x {len(masks)} masks x {len(seeds)} seeds = {total} generations")
     print(f"  masks {masks}   seeds {seeds}")
@@ -129,7 +144,7 @@ def main():
     log = []
     done = 0
     for it in items:
-        raw = np.fromfile(ART / "inputs" / f"{it['id']}.f32", dtype=np.float32)
+        raw = np.fromfile(in_dir / f"{it['id']}.f32", dtype=np.float32)
         sig = AudioSignal(raw[None, None, :], sample_rate=SR)
         with torch.no_grad():
             z = iface.encode(sig)
@@ -148,7 +163,8 @@ def main():
                 wav.astype(np.float32).tofile(out_dir / name)
                 log.append({
                     "file": name, "input": it["id"], "mask": m, "seed": s,
-                    "npviIn": it["npviIn"], "tokens": it["tokens"],
+                    "npviIn": it.get("npviIn"), "tokens": it.get("tokens"),
+                    "sourceFile": it.get("source"),
                     "inSec": len(raw) / SR, "outSec": len(wav) / SR,
                     "peak": float(np.abs(wav).max()),
                     "rms": float(np.sqrt((wav ** 2).mean())),
@@ -168,12 +184,12 @@ def main():
         "torch": torch.__version__,
         "generations": log,
     }
-    (ART / f"gen_{args.mode}.json").write_text(json.dumps(payload, indent=1))
+    (ART / f"gen_{tag}.json").write_text(json.dumps(payload, indent=1))
     print(f"\n  wrote {len(log)} outputs")
     print(f"  silent outputs: {silent}" + ("  <- investigate" if silent else ""))
     print(f"  duration preserved: "
           f"{sum(1 for r in log if abs(r['outSec'] - r['inSec']) < 0.05)}/{len(log)}")
-    print(f"  log -> {ART / f'gen_{args.mode}.json'}")
+    print(f"  log -> {ART / f'gen_{tag}.json'}")
 
 
 if __name__ == "__main__":

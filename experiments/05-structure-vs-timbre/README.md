@@ -450,6 +450,52 @@ high mask it neither preserves the input's structure nor imposes coda structure,
 producing timing closer to random than to a coda.** Its generative prior over
 rhythm, as reached through this surface, is not coda-shaped.
 
+### The codec round-trip baseline — which should have come first
+
+`encode → decode`, no mask, no sampling. Whatever this changes is the codec's own
+reconstruction fidelity, and it is the floor under every number above. It was not
+run until the ASACTER arm forced the question, which was a hole.
+
+| source | onsets in → out | nPVI in → out | round-trip slope | r |
+|---|---|---|---|---|
+| synthetic | 5.0 → 5.0 | 57.1 → 56.9 | **1.000** | 0.9995 |
+| ASACTER (real) | 13.3 → 16.7 | 79.3 → 72.1 | **0.307** | 0.6027 |
+
+**On synthetic click trains the codec is transparent.** Slope 1.000, r 0.9995,
+onset count exactly preserved. So nothing in the synthetic arm above is a
+reconstruction artifact — the β decay and the rise to nPVI ~90 are properties of
+masked generation, not of the codec. That is a meaningful strengthening of the
+result, arrived at by a check that could have destroyed it.
+
+**On real ASACTER audio the codec is not transparent.** A round-trip with no
+model involvement at all already gives slope 0.307 and adds 3.4 onsets.
+
+### The ASACTER control failed to be a control
+
+Run across the same mask grid (20 windows × 6 masks × 3 seeds = 360 generations),
+the real-audio arm gives β = 0.06–0.13 at *every* mask including 0.10, output
+onsets 24.8–38.5 against an input of 13.3, and N fails everywhere.
+
+None of that is interpretable, because **the codec round-trip alone accounts for
+it**. β 0.071 at mask 0.10 sits below the 0.307 the codec produces with no
+masking whatsoever. The arm measures reconstruction failure on dense real
+recordings, not WhAM's rhythm prior.
+
+This does not refute the synthetic finding. It cannot speak to it either way.
+
+Two honest notes on what that leaves:
+
+- **The timbre concern is unresolved, not answered.** ASACTER was meant to test
+  whether synthetic click timbre makes the model behave atypically. It cannot,
+  because the measurement chain is not transparent on that material. Testing it
+  needs real audio the codec *can* round-trip — sparser recordings, or annotated
+  single codas rather than 2.57 s of continuous click train.
+- **Codec fidelity on real dense sperm whale audio is itself worth flagging**,
+  though this measures the codec *and* the detector together and cannot separate
+  them. ASACTER windows carry ~13 onsets in 2.57 s plus overlapping animals,
+  surface echo, vessel noise and 0.6–9.9 % hard clipping. Any of those could
+  drive it.
+
 ### The limitation that most threatens this
 
 **The inputs are synthetic click trains, not real coda recordings.** They are in
@@ -458,10 +504,19 @@ distribution for *timbre* — and the model encodes timbre and timing into the s
 tokens. A model handed atypical tokens may fill in atypically for reasons that
 have nothing to do with its rhythm prior.
 
-Until real coda audio is run through the identical pipeline, the finding reads:
-*given sparse conditioning from synthetic click trains, output timing is
-irregular.* That is weaker than the headline above, and it is the next control —
-ASACTER's five coda-labelled recordings are already on disk from experiment 03.
+**The ASACTER attempt did not resolve this** — see above. The codec cannot
+round-trip that material faithfully, so the arm measures reconstruction rather
+than prior. The finding therefore still reads: *given sparse conditioning from
+synthetic click trains that the codec reconstructs perfectly, output timing is
+irregular.* The codec transparency is now verified, which the earlier version of
+this section could not claim; the timbre question is not.
+
+What would settle it is real audio the codec can round-trip — annotated single
+codas rather than continuous click train. Nothing in this repo has that. The
+Sharma and Hersh corpora are ICI annotations with no audio, ASACTER has audio
+with no annotations, and DSWP's annotated audio is the gated part of the dataset.
+**That gap is the binding constraint on this experiment, and it is a property of
+what is publicly available rather than of the design.**
 
 Also not licensed: this tests **acoustic translation only**, one of the three
 surfaces in `CLAUDE.md`. Pseudocoda synthesis and the embeddings are separate

@@ -45,7 +45,13 @@ function fit(pts) {
   return { slope, intercept: my - slope * mx, r: sxx > 0 && syy > 0 ? sxy / Math.sqrt(sxx * syy) : NaN, n: pts.length };
 }
 
-const man = JSON.parse(readFileSync(join(ART, "manifest.json"), "utf8"));
+// "<mode>_asacter" reads the real-audio manifest and input dir; anything else
+// reads the synthetic ones. ASACTER items carry no constructed nPVI — there is
+// no ground-truth annotation for real recordings — so npviConstructed is null
+// there and only the measured-on-measured regression is defined.
+const isAsacter = mode.endsWith("_asacter");
+const man = JSON.parse(readFileSync(join(ART, isAsacter ? "manifest_asacter.json" : "manifest.json"), "utf8"));
+const IN_DIR = isAsacter ? "inputs_asacter" : "inputs";
 const SR = man.meta.sampleRate;
 const byId = new Map(man.items.map((it) => [it.id, it]));
 
@@ -79,9 +85,9 @@ console.log(`  checkpoints  ` + Object.entries(gen.checkpoints)
 const inMeas = new Map();
 const usedIds = [...new Set(gen.generations.map((g) => g.input))];
 for (const id of usedIds) {
-  inMeas.set(id, measure(readF32(join(ART, "inputs", `${id}.f32`))));
+  inMeas.set(id, measure(readF32(join(ART, IN_DIR, `${id}.f32`))));
 }
-const inPts = usedIds.map((id) => [byId.get(id).npviIn, inMeas.get(id).npvi])
+const inPts = usedIds.map((id) => [byId.get(id).npviIn ?? NaN, inMeas.get(id).npvi])
   .filter((p) => p.every(Number.isFinite));
 const inFit = fit(inPts);
 console.log(`\n  detector on the inputs: slope ${fmt(inFit.slope)}  r ${fmt(inFit.r, 4)}  n ${inFit.n}`);
@@ -93,7 +99,7 @@ for (const g of gen.generations) {
   const m = measure(readF32(join(ART, `out_${mode}`, g.file)));
   rows.push({
     ...g,
-    npviConstructed: byId.get(g.input).npviIn,
+    npviConstructed: byId.get(g.input).npviIn ?? NaN,
     npviInMeasured: inMeas.get(g.input).npvi,
     npviOut: m.npvi,
     nOnsetsOut: m.nOnsets,
