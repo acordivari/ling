@@ -393,14 +393,79 @@ Mean output nPVI rises monotonically with mask: 33.9, 45.8, 54.1, 62.3, 84.5,
 that says WhAM does **not** converge on coda-like rhythm when the input stops
 constraining it — the opposite of the grammar prediction.
 
-**That reading is not safe yet.** Output onset density rises with mask over the
-same range (5.09 → 8.76 onsets in a fixed duration), so intervals get shorter, and
-G0 established that this detector *inflates* nPVI at short intervals — a 60 ms
-isochronous train reads 13.06 instead of 0. The nPVI rise and the density rise are
-confounded, and separating them is the next piece of work, not a caveat to
-mention and move past.
+### Density control — the rise is not an artifact
 
-So: **the transition is established; what lies above it is not.**
+Output onset density rises with mask over the same range (5.09 → 8.76 in a fixed
+2.57 s, a duration the model preserves exactly), and G0 established that this
+detector inflates nPVI at short intervals. So the two were confounded.
+
+`tools/exp05_density_control.mjs` builds click trains at *known* nPVI and matched
+density — no model — and measures what the detector reports. At coda-like nPVI
+the detector is accurate at **every** density from 5 to 16 onsets (bias −1.0 to
++2.8):
+
+| mask | out onsets | observed nPVI | coda @ that density | unexplained |
+|---|---|---|---|---|
+| 0.10 | 5.09 | 33.9 | 18.6 | **15.3** |
+| 0.20 | 5.25 | 45.8 | 18.9 | **26.9** |
+| 0.40 | 5.75 | 62.3 | 19.9 | **42.4** |
+| 0.60 | 6.78 | 84.5 | 19.8 | **64.7** |
+| 0.80 | 8.76 | 89.6 | 16.4 | **73.2** |
+
+Density explains essentially none of it. (The one place density *does* bite is
+true nPVI ≈ 0 at 14–16 onsets, bias +5.2 — the isochronous case G0 already
+flagged as the weakest point on the axis. It does not touch the coda range.)
+
+### And it holds for inputs that were already coda-like
+
+The strongest version of the test, from the same data — restrict to the 30
+generations per mask whose **input** was already coda-like (mean input nPVI 12.9,
+against real codas at 18.1 Pacific / 21.0 Dominica):
+
+| mask | input nPVI | output nPVI | onsets |
+|---|---|---|---|
+| 0.10 | 12.9 | **16.8** | 5.1 |
+| 0.20 | 12.9 | 30.7 | 5.2 |
+| 0.30 | 12.9 | 40.1 | 5.5 |
+| 0.40 | 12.9 | 49.7 | 5.7 |
+| 0.60 | 12.9 | 85.2 | 7.0 |
+| 0.80 | 12.9 | **91.6** | 8.6 |
+
+Given a coda-like rhythm and asked to resample most of it, the model does not
+return a coda-like rhythm. It returns something near the Poisson range (101,
+measured in experiment 02).
+
+### Reading this
+
+**On the pre-registered question, the answer is neither.**
+
+- Not a **grammar**: outputs do not snap to canonical coda timing as the input
+  stops constraining them. They move *away* from it, from coda-like inputs, and
+  the density control rules out the obvious artifact.
+- Not a pure **timbre** brush either: a texture brush would preserve input rhythm
+  at every mask, and β falls from ~1 to ~0 across the transition.
+
+What the data supports: **at low mask WhAM passes rhythmic structure through; at
+high mask it neither preserves the input's structure nor imposes coda structure,
+producing timing closer to random than to a coda.** Its generative prior over
+rhythm, as reached through this surface, is not coda-shaped.
+
+### The limitation that most threatens this
+
+**The inputs are synthetic click trains, not real coda recordings.** They are in
+distribution for *rhythm* by construction, but almost certainly out of
+distribution for *timbre* — and the model encodes timbre and timing into the same
+tokens. A model handed atypical tokens may fill in atypically for reasons that
+have nothing to do with its rhythm prior.
+
+Until real coda audio is run through the identical pipeline, the finding reads:
+*given sparse conditioning from synthetic click trains, output timing is
+irregular.* That is weaker than the headline above, and it is the next control —
+ASACTER's five coda-labelled recordings are already on disk from experiment 03.
+
+Also not licensed: this tests **acoustic translation only**, one of the three
+surfaces in `CLAUDE.md`. Pseudocoda synthesis and the embeddings are separate
+questions, and 11 inputs × 5 seeds is not the full 140-input sweep.
 
 ## What this will and will not license
 
