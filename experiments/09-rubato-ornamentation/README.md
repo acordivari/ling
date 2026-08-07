@@ -1,9 +1,12 @@
 # 09 — Do rubato and ornamentation survive controls?
 
-**Status: PRE-REGISTRATION. Written before any test statistic was computed.**
+**Status: RUN. Ornamentation does not survive; rubato does — half the
+pre-registered prediction was wrong.**
 
-The Result section is empty on purpose. Everything below the gates was fixed
-before running.
+Everything from [Question](#question) through [Nulls](#nulls) and the
+[prediction](#pre-registered-prediction) was frozen before the first test
+statistic was computed and is unchanged below. Results are in
+[Result](#result).
 
 ## Question
 
@@ -242,6 +245,177 @@ unreplicable findings.
 null at every `GAP` in the sweep, with leverage above the 33.3 floor this project
 inherited from experiment 01.
 
+## Result
+
+**Ornamentation does not survive. Rubato does — at every gap, against every
+control this project has, and the pre-registered prediction was therefore wrong
+about it.** It is the first effect from this corpus to survive the full control
+stack: clan rhythm fell (01, 04), turn-taking fell (08), positional
+ornamentation fell here.
+
+`tools/exp09_rubato_ornament.mjs`, `artifacts/rubato_ornament.json`.
+Deterministic, `SEED 909`. G1 re-derived from the data rather than trusted from
+the fetch: 95.65% agreement, the residual-class *rule* finds {17} and nothing
+else, zero mismatches outside it. G2: 8 zero-duration codas, all single-click,
+all in class 17 — so the class-17 exclusion covers them. G0 kept 3,083 of 3,840
+codas (80.3%). Observation universe: 2,958 classifiable codas, 116 ornamented.
+
+### Implementation decisions, fixed before first run
+
+The pre-registration left five things open; each was pinned in the tool header
+before any statistic was computed.
+
+1. **"Separated by no more than `GAP` seconds" is offset-to-onset** — the
+   silence between codas. The sweep exists because any such choice is a cut.
+2. **Runs are formed on the whale's full post-G0 timeline**, including codas
+   later excluded from observations. Being sequence-final is a physical fact
+   about what the whale produced; exclusion removes a coda's *observation*, not
+   the event. A run ending in an unclassifiable coda contributes no final
+   observation rather than a false one.
+3. **For S2, excluded codas break a run into fragments** rather than being
+   spliced over — splicing would manufacture adjacency between codas that were
+   never adjacent. Fragments need ≥ 3 codas; a 2-coda fragment's centered lag-1
+   product is negative by algebra, not by whale.
+4. **S2's statistic** is the pooled per-fragment-centered lag-1 autocorrelation
+   of duration. Per-fragment centering gives short fragments a negative
+   small-sample bias; the shuffle null has the same bias, so the comparison is
+   clean. It does mean observed *r* is not comparable across gaps — longer
+   fragments retain more slow variance — which is why the criterion was
+   significance at every gap, never magnitude.
+5. **The negative controls.** The registered wording — "runs split in half and
+   tested against themselves" — does not type-check for a positional or an
+   autocorrelation statistic, so its intent (data null by construction, pushed
+   through the full pipeline, firing at ≈ α) is implemented as: for S1,
+   relabel a uniformly random position in each run as pseudo-final; for
+   S2/S2b, draw once from the arm's own null and test that draw. All arms
+   fired at 1–5 of 40 against a nominal 2 (pass threshold 0.15, exp07's).
+
+One equivalence used without ceremony: permuting the *position label* within
+rhythm class induces the identical null on Δ as the registered "permute the
+ornament flag within rhythm class" — it is the same exchangeability, and it
+lets the shipped `permutationTest` from `explorer/js/rhythm.js` do the work.
+
+### S1 — ornamentation appears and disappears with the cut
+
+Δ = P(ornamented | final) − P(ornamented | non-final), identical in both arms;
+what changes is the null. Two-sided p, shift convention.
+
+| gap | finals | non-final | Δ obs | naive null | z | p | strat null | z | p | leverage |
+|---|---|---|---|---|---|---|---|---|---|---|
+| 3 s | 371 | 896 | 0.0136 | 0.0000 | 1.3 | 0.2679 | 0.0173 | −0.5 | 0.8286 | 259.7 |
+| 5 s | 544 | 2,104 | 0.0136 | −0.0003 | 1.6 | 0.1539 | 0.0090 | 0.7 | 0.6157 | 429.8 |
+| 10 s | 403 | 2,480 | 0.0327 | 0.0001 | 3.1 | **0.0040** | 0.0130 | 2.3 | **0.0480** | 344.5 |
+| 15 s | 343 | 2,572 | 0.0408 | 0.0000 | 3.5 | **0.0040** | 0.0143 | 2.7 | **0.0170** | 300.8 |
+| 30 s | 293 | 2,634 | 0.0204 | −0.0005 | 1.8 | 0.1279 | 0.0063 | 1.4 | 0.2259 | 261.0 |
+
+Three readings, in order of importance:
+
+- **The effect exists only under particular cuts.** Nothing fires at 3, 5 or
+  30 s in *either* arm; both fire at 10 and 15 s. An effect that a segmentation
+  parameter can switch on and off is the pre-registered signature of measuring
+  the cut. Under the fixed criterion — survive at every gap — S1 fails, and the
+  all-five criterion is precisely what makes the two uncorrected 0.048/0.017
+  unquotable as a finding.
+- **Where it fires, class composition manufactures a third to half of it.** At
+  10 s the within-class null already produces Δ = 0.0130 of the observed
+  0.0327; at 15 s, 0.0143 of 0.0408. Same observed number — the null rises to
+  meet it, exactly as in experiment 07's noise arm.
+- **The pre-registration's own probe was wrong about the click deficit.** The
+  probe claimed final codas average 0.18 *fewer* clicks; under the registered
+  universe the difference is +0.00 to +0.15 — final codas have marginally
+  *more* clicks, weakly toward the published direction. The probe's ad-hoc
+  universe (no G0, class 17 included, a different sequence rule) produced a
+  sign error, which is this experiment's thesis applied to itself: edge
+  statistics are cut-dependent.
+
+### S2 — rubato survives everything
+
+Pooled per-fragment-centered lag-1 autocorrelation of duration. S2's null
+shuffles durations within fragment; S2b's within fragment × class, preserving
+the class sequence and any duration structure it carries. One-sided high.
+
+| gap | frags | codas | 1-class | r obs | S2 null | z | p | S2b null | z | p | mass |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| 3 s | 192 | 893 | 71% | 0.106 | −0.197 | 7.8 | **0.0005** | −0.067 | 6.4 | **0.0005** | 633 |
+| 5 s | 388 | 2,311 | 59% | 0.265 | −0.148 | 12.1 | **0.0005** | 0.021 | 10.1 | **0.0005** | 1,701 |
+| 10 s | 353 | 2,738 | 48% | 0.405 | −0.097 | 17.5 | **0.0005** | 0.093 | 15.3 | **0.0005** | 2,101 |
+| 15 s | 324 | 2,814 | 45% | 0.483 | −0.079 | 20.1 | **0.0005** | 0.154 | 17.6 | **0.0005** | 2,195 |
+| 30 s | 286 | 2,844 | 43% | 0.522 | −0.068 | 22.6 | **0.0005** | 0.173 | 19.4 | **0.0005** | 2,262 |
+
+p = 0.0005 is the resolution floor at 2,000 iterations; every arm sits on it.
+The S2b null mean grows with gap — class composition in time does carry real
+smoothness, and the control absorbs exactly that — but the observed *r* sits
+6.4 to 19.4 standard deviations above what composition plus the shared
+small-sample bias can produce. Shuffle mass 633–2,262 against the 33.3 floor.
+
+The contrast with S1 is the point of the sweep. S1's *inference* flips with the
+cut: significant at two gaps, absent at three. S2's inference is identical at
+all five cuts; only the magnitude grows with window length, which per-fragment
+centering guarantees mechanically for any genuinely autocorrelated process.
+One statistic moves with the cut; the other does not.
+
+**What survives means, precisely:** within a rhythm class, click count is
+pinned to the centroid exactly (G1's zero-mismatch consequence), so within-class
+duration variation is pure inter-click timing. Runs are same-speaker, so no
+exp08 cross-speaker mixing; deployments are dedup'd, so no dual-tag doubling;
+the null preserves the class sequence, so no composition. What remains:
+**successive codas by the same whale drift smoothly in tempo, within coda
+type.** That is rubato in Sharma et al.'s sense, surviving the controls that
+dissolved every previous effect this project tested.
+
+### The probe's "collapse at longer lengths" does not reproduce
+
+The pre-registration flagged, as the falsification device for rubato, a
+first-pass observation that monotone duration drift collapsed to chance beyond
+length 4. Under the registered universe it does not collapse — the probe's
+universe (raw runs, class 17 in, duplicates in, monotonicity across mixed
+classes) was the artifact:
+
+| gap | L4 obs% (null%) | L5 | L6 | L7 | L8 |
+|---|---|---|---|---|---|
+| 3 s | 22.0 (8.2), n=41 | 3.7 (1.7), n=27 | 12.5 (0.3), n=16 | 0.0 (0.0), n=13 | 0.0 (0.0), n=7 |
+| 5 s | 19.5 (8.3), n=77 | 7.7 (1.7), n=52 | 2.3 (0.3), n=43 | 9.4 (0.0), n=32 | 9.1 (0.0), n=22 |
+| 10 s | 21.8 (8.2), n=55 | 5.1 (1.7), n=39 | 2.6 (0.3), n=38 | 9.4 (0.0), n=32 | 4.2 (0.0), n=24 |
+| 15 s | 27.1 (8.1), n=48 | 6.1 (1.7), n=33 | 0.0 (0.3), n=38 | 3.2 (0.0), n=31 | 5.0 (0.0), n=20 |
+| 30 s | 30.8 (8.5), n=39 | 4.3 (1.7), n=23 | 0.0 (0.3), n=27 | 3.6 (0.0), n=28 | 0.0 (0.0), n=19 |
+
+Strict monotonicity is a brutal statistic — chance is 2/L!, about 0.04% at
+L=7 — and 3 of 32 length-7 fragments are monotone at 5 s and again at 10 s.
+Cell counts are small and the cells are not independent across gaps; this table
+is diagnostic context for S2, not a test. The test is the autocorrelation.
+
+### Post-hoc robustness, not pre-registered
+
+`tools/exp09_posthoc.mjs`, run after the sweep falsified the prediction,
+because a surprising positive earns more hostility than a null. At 3 s / 10 s:
+
+- **Broad-based:** 58.3% / 62.5% of individual fragments (length ≥ 4) have
+  positive own-*r*, against a sub-50% chance baseline from the centering bias.
+- **Not the majority class:** fragments consisting only of class 2 give
+  z = 5.5 / 12.0; single-class fragments of *other* classes give z = 3.7 / 5.7.
+- **Not one recording:** leave-one-recording-out worst case z = 5.3 / 11.5
+  (dropping `sw061b003`, of 49 / 125 recordings).
+- **Room to vary:** class-2 duration CV is 0.21 / 0.27 — within-class timing
+  varies by a fifth of the mean, so there is real signal to structure.
+
+### Reading this
+
+Rubato surviving is a statement about *structure*, not *use*. Smooth tempo
+modulation is what a whale's respiration, arousal or dive phase would also
+produce; nothing here distinguishes modulation-as-signal from
+modulation-as-state. Sharma et al.'s stronger claim — that rubato is deployed
+contrastively, as part of a combinatorial code — is untested by this design.
+The control is also exactly as fine as the authors' own 18 classes: a finer
+rhythm inventory could in principle re-absorb some smoothness as composition.
+But that inventory is the paper's own, so the claim survives on its own terms.
+
+The asymmetry of the outcome is worth recording. The prediction said neither
+would survive, and it was stated in advance precisely because a positive would
+be more interesting than a null. Ornamentation behaved like every effect this
+project had previously dissolved — cut-dependent, half composition. Rubato did
+not, anywhere, under anything. That is what a real effect is supposed to look
+like, observed once in nine experiments.
+
 ## What this will not license
 
 - **A refutation of Sharma et al.** Their analysis used definitions, subsetting
@@ -262,8 +436,12 @@ inherited from experiment 01.
 ```bash
 python3 tools/fetch_corpus.py                             # dialogues CSV
 ./wham/.venv/bin/python tools/fetch_sharma_labels.py      # labels + G1/G2 gates
-node    tools/exp09_rubato_ornament.mjs                   # not yet written
+node    tools/exp09_rubato_ornament.mjs                   # gates, sweep, artifacts
+node    tools/exp09_posthoc.mjs                           # post-hoc robustness
 ```
+
+Both tools are deterministic; a re-run reproduces `artifacts/rubato_ornament.json`
+byte-for-byte.
 
 Use the venv interpreter for the label fetch — `mean_codas.p` is a numpy pickle
 and the system `python3` here is the x86_64 build with no numpy (INSTALL.md, the
