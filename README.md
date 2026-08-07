@@ -120,6 +120,30 @@ measures, what it cannot, and the documented limits of its IPI estimator.
   corpus without social-unit ids is forced into is **measurably
   anti-conservative** — calibrated against Dominica, where both are known,
   101 of 126 true-null splits shift *p* downward (sign test p = 5e-12).
+- [`05-structure-vs-timbre`](experiments/05-structure-vs-timbre/) — did WhAM
+  learn a coda timbre or a coda grammar? **Neither.** β, the slope of output
+  nPVI on input nPVI, falls from ~1 to ~0 across a sharp transition between mask
+  0.4 and 0.6. Below it input rhythm passes through; above it the model neither
+  preserves the input nor imposes coda timing, drifting to nPVI ~90 against real
+  codas at 18–21 and a Poisson process at 101 — *from coda-like inputs*. A
+  density control rules out the detector artifact and a codec round-trip
+  (slope 1.000, r 0.9995 on synthetic) rules out reconstruction. **WhAM's
+  generative prior over rhythm, reached through acoustic translation, is not
+  coda-shaped.** The pre-registered G0 measurement gate failed first, in the
+  direction that would have manufactured the grammar result with no model
+  involved.
+- [`06-audio-annotation-join`](experiments/06-audio-annotation-join/) — can the
+  open DSWP audio be joined to the public coda annotations, which are published
+  as disjoint artifacts? **Gate failed; no matching was run.** On synthetic
+  material the detector is near-perfect (99.2% exact click count across four
+  sample rates and three IPIs). On real audio only 35.5% of files hold their
+  click count under a ±20% sensitivity change, and the median recovered count is
+  **11 at 44.1 kHz against 4 at 48 kHz** — so matching would have paired files to
+  annotation rows by recording equipment. The obvious remedy is disqualified:
+  the 200 ms floor that makes counts look coda-like merges 58.9% of real
+  annotated ICIs. Recovered anyway: the corpus contains **five recording
+  configurations**, derived from WAV headers, in a dataset whose card states no
+  such metadata exists.
 
 ## Planned experiments
 
