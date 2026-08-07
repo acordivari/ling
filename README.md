@@ -141,9 +141,38 @@ measures, what it cannot, and the documented limits of its IPI estimator.
   **11 at 44.1 kHz against 4 at 48 kHz** — so matching would have paired files to
   annotation rows by recording equipment. The obvious remedy is disqualified:
   the 200 ms floor that makes counts look coda-like merges 58.9% of real
-  annotated ICIs. Recovered anyway: the corpus contains **five recording
-  configurations**, derived from WAV headers, in a dataset whose card states no
-  such metadata exists.
+  annotated ICIs.
+  An identifiability analysis then showed the barrier is **not implementation
+  quality**: the annotation table needs a standardised-ICI tolerance of ~0.002
+  (≈1.7 ms per interval) to resolve even 32.7% of rows uniquely, and the
+  detector's 128-sample onset grid is coarser than that for 1,240 of the 1,501
+  files. Matching on duration instead — proposed here as the promising
+  amendment — was measured and **retracted**: 3.1% unique at 0.5 ms.
+  A distributional test survives the per-file failure and is the strongest
+  result: measured click span has median **1.511 s** against **0.854 s**
+  (`DominicaCodas.csv`) and **0.990 s** (dialogues), stable across all five
+  rigs. The median DSWP file looks like a 98th-percentile annotated coda.
+  Detector over-segmentation and clips-hold-more-material both predict this and
+  are not separable without the ground truth that is missing in the first place.
+  Recovered anyway: the corpus contains **five recording configurations**
+  (846 / 368 / 219 / 42 / 26 at 48k stereo, 44.1k mono, 120k stereo, 96k stereo,
+  44.1k stereo), derived from WAV headers, in a dataset whose card states no such
+  metadata exists.
+- [`07-vowel-artifact`](experiments/07-vowel-artifact/) — **open.** Is the
+  published sperm whale coda-vowel distinction an artifact of recording or
+  analysis configuration? Rendell's objection — that the "formants" are
+  intra-click pulse structure — is unrebutted in the literature, and the authors'
+  own June 2026 ship-noise paper shows the vowel measure responds to ambient
+  acoustics. One result so far, from the authors' public deposit, no audio and no
+  null model required because the relation is exact: every one of the 3,362
+  spectral values across all four columns is a mean over detected peaks of a
+  per-click quantity that is an **integer multiple of 58.59375 Hz** — an FFT bin
+  width, and 58.59375 × 2048 = 120 000 Hz exactly, one of the five rigs found in
+  experiment 06. **The a/i distinction is a mean separation of 1.31–2.17 bins of
+  that grid.** This bounds the resolution of the claim; it does not refute it.
+  The question it opens — whether a fixed FFT was applied across five sample
+  rates without resampling, which would make bin width vary 2.7× with equipment —
+  cannot be answered from the public deposit.
 
 ## Planned experiments
 

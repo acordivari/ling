@@ -319,24 +319,134 @@ presentable is the setting that destroys the signal.
 matching statistic exists.** Per the pre-registration, that is the whole point of
 running the gate first.
 
-Candidate amendments, recorded now so that whichever is chosen is chosen before
-seeing a match result, not after:
+Candidate amendments, recorded before running any of them:
 
 1. **Restrict to a single rig.** Defensible, costs the corpus. The 48 kHz set is
    largest (846) and cleanest, but its median 4 recovered clicks against a corpus
    dominated by 5-click codas suggests *under*-detection, which is its own bias.
 2. **Change the statistic to duration.** Matching on coda extent needs only the
-   first and last onset, a far weaker demand than every interior click. This is
-   motivated by evidence rather than convenience: the `coda-vowel-phonology` set
-   joins to `sperm-whale-dialogues.csv` on `Duration` alone at 96.6% matched and
-   93.5% uniquely matched. Uniqueness will be worse here (1,501 against 8,112 is
-   denser), so duration would likely need pairing with a coarse click-count band.
-3. **Abandon the per-file join** and report the negative: the alignment asserted
-   in arXiv:2606.16084 is not reproducible from public sources with this
-   instrument.
+   first and last onset, a far weaker demand than every interior click.
+3. **Abandon the per-file join** and report the negative.
 
-Option 2 is the most promising and is not yet run. Option 3 remains the honest
-fallback and is a publishable-quality negative in its own right.
+Option 2 was called "the most promising" here before it was tested. **It is the
+worst of the three, and the identifiability analysis below is why.** Recorded as
+a retraction rather than edited away.
+
+## Identifiability — is a per-file join possible in principle?
+
+Run before building any matcher, because a matcher that cannot succeed at any
+implementation quality is not worth writing. Pure combinatorics on the 8,112-row
+annotation table; no audio, no detector. For a query row, how many rows fall
+within tolerance?
+
+**A. Duration alone**
+
+| tolerance | median candidates | p90 | uniquely identified |
+|---|---|---|---|
+| 0.5 ms | 8 | 33 | 3.1% |
+| 5 ms | 75 | 326 | 0.1% |
+| 10 ms | 149 | 637 | 0.0% |
+
+**B. Duration + exact click count**
+
+| tolerance | median candidates | p90 | uniquely identified |
+|---|---|---|---|
+| 1 ms | 12 | 56 | 10.1% |
+| 5 ms | 58 | 249 | 2.7% |
+| 10 ms | 117 | 503 | 1.2% |
+
+**C. Full standardised ICI vector + exact click count** — the pre-registered statistic
+
+| tolerance | median candidates | p90 | uniquely identified |
+|---|---|---|---|
+| **0.002** | **3** | 16 | **32.7%** |
+| 0.005 | 29 | 197 | 11.5% |
+| 0.010 | 206 | 864 | 3.2% |
+
+**Duration matching is hopeless.** At 0.5 ms — finer than any onset detector here
+can deliver — the median query still has 8 candidates and 3.1% resolve uniquely.
+The reasoning that motivated it was wrong in a specific and instructive way: the
+`coda-vowel-phonology` set does join to `sperm-whale-dialogues.csv` on `Duration`
+at 93.5% unique, but that is an **exact float join between two tables carrying the
+same annotated numbers**, not a measurement matched against a table. Transferring
+a join key across that boundary was the error.
+
+**The pre-registered statistic was the right one**, and it needs a tolerance near
+**0.002** in standardised-ICI space to reach even one-third unique identification.
+Standardised ICIs sum to 1 over ~4 intervals, so 0.002 mean absolute difference is
+roughly **1.7 ms per interval on a median 0.854 s coda**.
+
+The shipped detector quantises onset times on a 128-sample hop: **2.90 ms at
+44.1 kHz**, 2.67 ms at 48 kHz, 1.33 ms at 96 kHz, 1.07 ms at 120 kHz. At the two
+low rates — 1,240 of 1,501 files — **the measurement grid is coarser than the
+precision the annotation table demands.** No detector tuning fixes that; it is the
+grid. Sub-hop onset refinement does not exist in this repo (noted as absent in
+experiment 05) and would be required before the low-rate rigs could be attempted
+at all.
+
+## The distributional test, which survives a per-file failure
+
+Per-file matching fails, but the underlying question — *is this audio the material
+those tables annotate?* — is still answerable from distributions, which do not
+require any file to be matched to any row.
+
+Click span (first to last detected onset) measured on all 1,501 files, against
+both public annotation sets:
+
+| set | n | p10 | median | p90 | max |
+|---|---|---|---|---|---|
+| `DominicaCodas.csv` (cleaned) | 8,112 | 0.322 | **0.854** | 1.325 | 1.917 |
+| `sperm-whale-dialogues.csv` | 3,832 | 0.326 | **0.990** | 1.341 | 2.183 |
+| **DSWP audio, measured** | 1,369 | 0.929 | **1.511** | 2.072 | 3.950 |
+
+Per rig, the DSWP median click span is 1.436 / 1.498 / 1.511 / 1.556 / 1.657 s
+across the five configurations — **stable to within 0.22 s, so this is not a rig
+artifact.**
+
+> **The median DSWP file, as measured, looks like a 98th-percentile annotated
+> coda.** Only 1.9% of `DominicaCodas.csv` rows and 2.6% of dialogue rows reach
+> 1.511 s. The DSWP maximum, 3.950 s, is 1.8× the longest annotated vocalisation
+> in either table.
+
+### Two readings, and this instrument cannot separate them
+
+- **H1 — the detector over-segments.** G4 already shows median 11 recovered clicks
+  at 44.1 kHz against corpora dominated by 5-click codas. Surface reflections
+  arrive tens of milliseconds after the direct path, above the 30 ms floor, so
+  they register as onsets. Spurious onsets before or after the coda proper inflate
+  the span.
+- **H2 — the clips hold more than one annotated coda's worth of material.**
+
+Both predict everything observed. H1 is strongly supported by G4; the magnitude
+argues against it being the whole story, since a 0.66 s median excess is large for
+echo inflation alone. **They are not separable without ground truth, and no public
+ground truth exists — which is the same gap that opened this experiment.**
+
+## Conclusion of the first pass
+
+**JOIN NOT RECOVERED, and the barrier is not implementation quality.**
+
+Three independent findings, each sufficient on its own:
+
+1. **Click count is rig-determined** (median 11 at 44.1 kHz, 4 at 48 kHz) and
+   unstable (35.5% reproducible), so files cannot be reliably placed in a
+   candidate pool.
+2. **The annotation table is not identifiable at achievable precision.** The
+   required standardised-ICI tolerance of ~0.002 sits below the detector's onset
+   grid for 1,240 of 1,501 files, and even at that tolerance only 32.7% of rows
+   are unique.
+3. **The measured audio does not present as single annotated codas** in either
+   public table, at a distributional level, consistently across all five rigs.
+
+This does **not** establish that the DSWP audio and the Sharma annotations are
+unrelated — H1 alone could produce finding 3, and findings 1 and 2 are statements
+about the instrument and the table. What it establishes is that the alignment
+asserted in arXiv:2606.16084 is **not reproducible from public sources with this
+measurement chain**, and that recovering it would require sub-hop onset
+refinement, echo rejection, or per-coda ground truth — none of which exist here.
+
+Recovering the join is therefore not the cheapest route to the phase-2 question,
+and phase 2 does not need it.
 
 ### What the gate produced anyway
 
