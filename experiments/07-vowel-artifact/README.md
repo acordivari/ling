@@ -1,9 +1,11 @@
 # 07 — Is the coda-vowel distinction a recording or analysis artifact?
 
-**Status: OPEN. Two results established — the measurement grid, and the
-individual-versus-composition test across three levels of clustering. The
-recording-artifact test itself is blocked on a rig label per coda, which
-experiment 06 could not deliver.**
+**Status: four tests run, one of them adequately powered.** The measurement grid
+stands as a positive result. Of the four routes to the artifact question:
+between animals and within-animal-across-sessions are **underpowered**; against
+recording rig is **not joinable** (experiment 06); and the annotator's noise flag
+— the only arm with leverage above this experiment's own floor — returns a
+**null within bout**, modest evidence against the crudest artifact story.
 
 ## Question
 
@@ -284,10 +286,154 @@ the raw difference, arm B because bout-level clustering removes what remained,
 arm C because whale identity and recording session are the same variable for 9 of
 13 animals.
 
-One detail still worth chasing: **`6-NOISE` codas show the highest "i" rate in the
-corpus at 64.5%.** Noise-labelled codas being the most vowel-positive, in a corpus
-whose own authors have shown the vowel measure responds to ambient noise, is a
-convergence rather than a coincidence.
+The `6-NOISE` observation flagged here in earlier passes is now tested in its own
+section below; it does not survive a within-bout control.
+
+## Does the vowel move when the SAME whale is re-recorded?
+
+`tools/exp07_vowel_session.mjs`. Thresholds reused unchanged from the individual
+test — `MIN_LEVERAGE` 33.3, `MIN_ASSIGNMENTS` 20, α 0.05 — so the two are
+directly comparable.
+
+The individual test found its own question unanswerable: 9 of 13 whales have one
+deployment, so identity and session are the same variable. Four whales escape
+that, and they invert the design — **hold the animal fixed, vary the recording
+session.** That is the artifact question stated directly:
+
+- vowel is body size / click structure → **stable** within an animal
+- vowel moves with recording conditions → **shifts** between that animal's own sessions
+
+### The raw numbers look decisive, and are not
+
+| whale | deployment | codas | bouts | P(i) |
+|---|---|---|---|---|
+| FORK | sw078a | 69 | 4 | 0.536 |
+| FORK | sw085a | 190 | 23 | 0.332 |
+| FORK | sw090b | 29 | 5 | 0.345 |
+| JOCASTA | sw114b | 28 | 5 | **0.000** |
+| JOCASTA | sw133a | 25 | 6 | **0.320** |
+| LAIUS | sw100a | 13 | 3 | 0.231 |
+| LAIUS | sw134a | 16 | 2 | 0.375 |
+| TBB | sw091a | 45 | 7 | **0.422** |
+| TBB | sw097a | 15 | 3 | **0.000** |
+| TBB | sw119b | 49 | 6 | 0.163 |
+
+Within-animal spread across its own sessions: FORK 0.205, JOCASTA 0.320,
+LAIUS 0.144, **TBB 0.422**. TBB goes from 42.2% "i" to 0.0% and back to 16.3%.
+Those swings are larger than any between-animal gap the previous section tested.
+
+### Arm 1 — the formal contrast
+
+Applying the pre-registered thresholds admits **one contrast of eight**.
+
+| contrast | n | leverage | assignments | observed | null | p |
+|---|---|---|---|---|---|---|
+| FORK sw078a/sw085a | 69+190 | 45.2 | 17,550 | 0.126 | 0.174 | **0.5827** |
+
+The other seven fail on leverage (6.5–23.1) or assignments (C = 10 for LAIUS).
+The one that runs shows **no session effect** — and the observed difference sits
+*below* the null mean, not above it.
+
+### Arm 2 — and the false positive the null caught
+
+Residualise every coda against its coda-type mean, then compare two spreads:
+between-animal SD of the residual vowel rate, against within-animal
+between-session SD.
+
+```
+between-animal SD                         0.1073   (11 whales)
+within-animal, between-session SD         0.2089   (10 cells, 4 whales)
+ratio within / between                    1.947
+```
+
+Read naively that is a headline: **session movement is twice between-animal
+movement, so an "individual vowel signature" is really a session signature.**
+
+It is wrong, and the permutation null says so. Reshuffling each whale's bouts
+among its own sessions — preserving bouts per session, destroying session
+identity — already produces a ratio of **1.781 at the median**, p95 2.549.
+
+```
+observed 1.947    null median 1.781    p = 0.3579
+```
+
+**The ratio is inflated by cell size, not by sessions.** A whale's session cells
+hold 13–190 codas, so their means are noisy; a whale's overall mean pools far
+more. Small cells scatter more than large ones whatever produced them, and a
+within/between ratio near 2 is what chance delivers here. Once that is accounted
+for, the observed 1.947 is unremarkable.
+
+This is the same failure mode as experiment 05's detector bias and experiment
+06's rig-determined click count: a quantity that looks like a finding until it is
+compared against what the design produces with no effect present.
+
+### Reading this
+
+**No session effect is detectable, and the design is weak enough that this says
+little.** One testable contrast at p = 0.58, and a variance ratio at chance.
+
+It does *not* vindicate the vowel measure against the artifact objection. Diamant
+et al. (June 2026) demonstrated with far better data that ship noise moves the a/i
+distribution; nothing here contradicts that. What this shows is that the **public**
+vowel data cannot resolve session effects either — the same verdict the individual
+question got, from the opposite direction.
+
+The three questions this experiment can ask of public data have now all returned
+"underpowered": between animals, within animals across sessions, and — from
+experiment 06 — against recording rig, which needs a join that does not exist.
+
+## Does an annotator's NOISE flag change the vowel label?
+
+`tools/exp07_vowel_noise.mjs`. The most direct test of the artifact hypothesis
+available in public data, and the only one that needs no rig label.
+
+The Sharma coda-type vocabulary carries its own noise flag — `5-NOISE`,
+`6-NOISE`, `9-NOISE` — so the corpus already marks which codas were hard to read.
+If noise contamination moves the vowel classifier, flagged codas should classify
+differently.
+
+The raw observation, flagged three times earlier in this file without being
+tested: **NOISE codas are 57.4% "i" against 34.1% for clean codas.**
+
+First, the check that decides whether any of it is real: the 54 NOISE codas span
+**21 bouts, 8 deployments and 6 whales**, with bout sizes of 1–4. They are not
+concentrated, so this is not the pseudoreplication that would ordinarily explain
+a difference this size.
+
+| control | leverage | observed | null | p |
+|---|---|---|---|---|
+| pooled — nothing controlled | — | −0.2329 | +0.0004 | **0.0010** |
+| stratified by click count | 34.4 | −0.2329 | +0.0084 | **0.0005** |
+| **stratified by BOUT — same recording** | **45.1** | −0.2329 | **−0.1430** | **0.1155** |
+
+(Signed clean − noise; `kind: "shift"`, so the test is two-sided and no
+`explainedByNull` percentage is reported — the guard experiment 01 installed.)
+
+**The observed statistic is identical in all three arms. It is the same data.**
+What changes is the null. Shuffling the NOISE flag *within bouts* — same animal,
+same session, same acoustic conditions, same minute, only the annotator's
+per-coda flag differing — already reproduces −0.143 of the −0.233, leaving −0.090
+unexplained at p = 0.1155.
+
+Two things make this arm worth more than the others in this experiment:
+
+- **Leverage is 45.1**, above the 33.3 floor. Unlike the individual and session
+  questions, this is not an underpowered null; the design can see an effect of
+  this size and does not find one.
+- Stratification is the correct control here, not clustering. NOISE and clean
+  codas occur *inside the same bout*, so the label varies within cluster and the
+  cluster-permutation mode does not apply.
+
+**Reading:** most of the pooled NOISE effect is between-bout composition rather
+than per-coda contamination. That is modest evidence *against* the crudest
+version of the artifact hypothesis — noise flagging alone does not flip the vowel
+label within a recording.
+
+It is not evidence the vowel measure is noise-robust in general. The coda-type
+`NOISE` token is the annotator's judgement about whether a coda could be read,
+not a calibrated measurement of acoustic contamination, and Diamant et al. (June
+2026) demonstrated a real noise effect with far better instrumentation than a
+categorical flag. What this rules out is the version testable from public data.
 
 ## Infrastructure this required
 
@@ -324,7 +470,10 @@ runs.
 
 ```bash
 python3 tools/exp07_vowel_grid.py           # fetches codasp.csv, recovers the grid
-node    tools/exp07_vowel_individual.mjs    # leverage pass, then the pairwise test
+python3 tools/exp07_join_bouts.py           # joins vowel labels to bout/deployment ids
+node    tools/exp07_vowel_individual.mjs    # between animals, three clustering levels
+node    tools/exp07_vowel_session.mjs       # within animal, between session
+node    tools/exp07_vowel_noise.mjs         # the annotator's NOISE flag
 ```
 
 The deposit is public (`Project-CETI/coda-vowel-phonology`, OSF `9t6qu`). Fetched

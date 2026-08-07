@@ -191,6 +191,25 @@ measures, what it cannot, and the documented limits of its IPI estimator.
   exactly one deployment**, so whale identity and recording session are largely
   the same variable. All of this is an underpowered null, not evidence of no
   effect — the distinction experiment 01 had to retract twice before getting right.
+  Those deployment ids then allow the design to be **inverted**: hold the animal
+  fixed and vary the recording session. Four whales were tagged more than once,
+  and their raw swings look decisive — **TBB runs 42.2% "i" → 0.0% → 16.3%
+  across its own three deployments**. One contrast of eight clears the
+  pre-registered thresholds, at p = 0.58. And a variance ratio suggesting session
+  movement is 2× between-animal movement (1.947) turns out to be **what chance
+  already produces** — reshuffling a whale's bouts among its own sessions gives a
+  null median of 1.781, p = 0.36. Small cells scatter more than large ones; the
+  null caught a false positive that would otherwise have been the headline.
+  Finally the one arm that is **not** underpowered. The coda-type vocabulary
+  carries its own noise flag, so the artifact question can be asked directly:
+  NOISE-flagged codas are 57.4% "i" against 34.1% for clean codas, and the 54 of
+  them span 21 bouts, 8 deployments and 6 whales, so it is not pseudoreplication.
+  Pooled p = 0.0010, click-count-stratified p = 0.0005 — but stratified **within
+  bout** (same animal, same session, same minute; only the per-coda flag differs)
+  the null already reproduces −0.143 of the −0.233, leaving −0.090 at
+  **p = 0.1155 on leverage 45.1**. Most of the pooled effect is between-bout
+  composition, not per-coda contamination — modest evidence *against* the crudest
+  form of the artifact hypothesis, from the only arm with the power to say so.
 
 ## Planned experiments
 
