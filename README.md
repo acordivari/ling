@@ -22,7 +22,8 @@ so the explorer's biggest documented limitation — "these are stylised
 realisations of coda notation, not ground truth" — is now removable. 8,112
 cleaned codas with clan, social unit, and individual labels.
 
-It is built around one result, and the result is a **null result**.
+It is built around one question, and the useful part is that the answer changed
+four times before settling.
 
 Sperm whale clans EC1 and EC2 separate strongly in rhythm space (0.1287); a naive
 label permutation gives p < 0.0005, 43× the null. But two things are wrong with
@@ -32,19 +33,40 @@ not of a coda — all 12 units are single-clan — so shuffling clan across 6,10
 individual codas treats correlated observations as independent.
 
 Control either one and the effect shrinks. Control **both at once** — remove each
-coda's coda-type mean, then permute clan across whole units — and it vanishes:
+coda's coda-type mean, then permute clan across whole units — and it appears to
+vanish:
 
-| null | p |
-|---|---|
-| naive | 0.0005 |
-| stratified by coda type | 0.0005 |
-| by social unit | 0.0152 |
-| **both together** | **0.9630** |
+| null | p | what it controls |
+|---|---|---|
+| naive | 0.0005 | nothing |
+| stratified by coda type | 0.0005 | repertoire composition — 99.0% explained |
+| by social unit | 0.0152 | non-independence — rank 1 of 66 |
+| both together | 0.9630 | both |
 
-95% of random unit relabellings separate the clans *more* than the real split
-does. So the tool makes the null model the primary control, reports *explained by
-null* beside every p-value, and states which confounds each null does and does not
-handle.
+**That last row is not a null result, and reading it as one was this project's
+most expensive mistake.** Injecting an identical within-type effect into each
+candidate unit pair showed the real EC1/EC2 split ranks **1 of 66 in
+sensitivity** — 17.7× below the median. The p measured the instrument, not the
+whales. A corrected statistic (inverse-variance-weighted within-type contrast,
+all 66 assignments enumerated exactly) puts the real split at **rank 27 of 66,
+p = 0.6061**: the middle of the distribution.
+
+The honest conclusion is that **this design cannot answer the question.**
+Within-type leverage is **33.3 codas of 6,038** — 0.55% of the rows a naive
+reading assumes — because only two coda types are shared across clans at all, in
+cells of 15 and 19. The minimum detectable effect is roughly 40% of a typical
+interval, a change large enough to reclassify the coda. And with C(12,2) = 66
+possible unit assignments, 0.0152 is the finest p this design can ever produce.
+
+Not "the clans are the same." *"This cannot tell."*
+
+So the tool makes the null model the primary control, reports *explained by null*
+beside every p-value, states which confounds each null does and does not handle —
+and, since 2026-08-06, ships the joint test in `permutationTest` with
+**`leverage` returned beside `p`**, so the number that would have caught the
+error is no longer possible to omit. Full history, including all four
+conclusions in the order they were published, is in
+[`experiments/01-clan-rhythm-confound`](experiments/01-clan-rhythm-confound/).
 
 It also places coda rhythm on a shared axis with real human drumming: whale codas
 sit at nPVI 21.0 against 56–78 for human drummers measured through the identical
@@ -67,7 +89,7 @@ signals, and seeing what a rhythm metric and a timbre metric say about the pair.
 
 ```bash
 cd explorer && python3 -m http.server 8777   # → http://localhost:8777/
-npm test                                     # 299 assertions, 4 suites
+npm test                                     # 383 assertions, 4 suites
 ```
 
 It also carries a **glossary** (`◈ Glossary`, top bar): 75 entries covering the
@@ -91,10 +113,15 @@ measures, what it cannot, and the documented limits of its IPI estimator.
   **Verdict: equivalent**, all four pre-registered criteria passed.
 - [`01-clan-rhythm-confound`](experiments/01-clan-rhythm-confound/) — is the
   EC1/EC2 rhythm difference a dialect or a repertoire difference?
-  **Null result.** Controlling repertoire composition and unit-level
-  non-independence together gives p = 0.96, with 95% of null relabellings
-  producing a larger separation than the real one. Two earlier, weaker versions of
-  this conclusion are recorded alongside it rather than overwritten.
+  **Underpowered — the design cannot answer it.** Controlling repertoire
+  composition and unit-level non-independence together gives p = 0.96, but that
+  p is an artifact: the real split ranks **1 of 66 in sensitivity**, 17.7× below
+  the median, so it measured the instrument. A corrected statistic puts the split
+  at rank 27 of 66 (p = 0.6061), and within-type leverage is **33.3 codas of
+  6,038** across just two shared coda types. Four conclusions were published in
+  sequence and all four are kept in the order they were reached; cite the third
+  with the fourth's caveat that rank is soft. Not "the clans are the same" —
+  *"this cannot tell."*
 - [`02-cross-domain-rhythm`](experiments/02-cross-domain-rhythm/) — where does
   coda rhythm sit relative to human rhythm? **Below every human drumming style
   measured** (nPVI 21.0 vs 56–78, Cohen's d −1.3 to −2.5), through an identical

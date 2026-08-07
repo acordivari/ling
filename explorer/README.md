@@ -151,7 +151,7 @@ twice the true number of intervals. `minIci` of 0.08–0.10 gives F1 = 1.000 on 
 six at every seed tested.
 
 **Deliberately not fixed here.** Raising the default changes the behaviour the
-existing 84 assertions were written against, and that is a judgement call about
+existing analysis assertions were written against, and that is a judgement call about
 this A/B tool rather than a defect in the analysis added later — the Observatory
 does not use onset detection at all, it works from annotated inter-click
 intervals. Until it is decided: raise the `min interval` slider to 0.08 before
@@ -218,13 +218,13 @@ removes the feature cleanly.
 
 ```bash
 npm test                          # all four suites
-node test/analysis.test.mjs       # 84 assertions, signal round trip
+node test/analysis.test.mjs       # 87 assertions, signal round trip
 node test/glossary.test.mjs       # 24 assertions, reference data integrity
-node test/rhythm.test.mjs         # 94 assertions, statistics kernel
-node test/observatory.test.mjs    # 97 assertions, claim wiring + every claim x null
+node test/rhythm.test.mjs         # 138 assertions, statistics kernel
+node test/observatory.test.mjs    # 134 assertions, claim wiring + every claim x null
 ```
 
-299 assertions total.
+383 assertions total.
 
 **The suite is now deterministic — byte-for-byte, output included.** It
 previously failed about 1 run in 40 on `IPI 2.5ms (band edge)` — not a
@@ -257,7 +257,7 @@ The glossary suite checks the wiring rather than the prose: unique ids, every
 the two registers actually differing. All three failure modes are silent in the
 browser — a dead cross-link just renders as nothing.
 
-The analysis suite is 84 assertions. They synthesise signals with known structure and check the
+The analysis suite is 87 assertions. They synthesise signals with known structure and check the
 analysis recovers it — the only reason to trust any number the UI shows. The
 IPI assertions are rate-based over repeated trials because the click grains are
 noise-based and detection is genuinely stochastic at the edges.
@@ -369,16 +369,32 @@ Remove each coda's own coda-type mean, *then* permute clan across the 12 units:
 | naive, coda-level | 0.0005 | "This survives the null" |
 | stratified by coda type | 0.0005 | 99.0 % explained |
 | by social unit | 0.0152 | rank 1 of 66 |
-| **both at once** | **0.9630** | **smaller than chance produces** |
+| both at once | 0.9630 | observed 0.00145 vs null mean 0.00585 |
 
-Observed 0.00145 against a null mean of 0.00585, with **95 % of unit relabellings
-producing a larger separation than the real one**. The clans differ in *which*
-codas they use. There is no detectable difference in *how they time a shared coda
-type*.
+That joint test was found by adversarial review running the analysis this project
+had declined to implement — the refusal to combine `clusters` with `strata` was
+described here as restraint, and it was not. It is now shipped in
+`permutationTest`, and every joint result carries **`leverage` beside `p`**.
 
-**That is a null result, and it is the headline.** It was found by adversarial
-review running the test this project had declined to implement — the refusal to
-combine `clusters` with `strata` was described here as restraint, and it was not.
+**But the joint p is not a null result, and this README described it as one for
+weeks.** Injecting an identical within-type effect into each candidate unit pair
+showed the real EC1/EC2 split ranks **1 of 66 in sensitivity**, 17.7 × below the
+median — the least able of all 66 splits to detect an effect. The 0.9630 measured
+the instrument, not the whales. A corrected statistic (inverse-variance-weighted
+within-type contrast, all 66 assignments enumerated exactly) puts the real split
+at **rank 27 of 66, p = 0.6061** — the middle of the distribution.
+
+**The conclusion is that the design cannot answer the question.** Within-type
+leverage is **33.3 codas of 6,038**, because only two coda types are shared
+across clans at all, in crossover cells of 15 and 19. The minimum detectable
+effect is roughly 40 % of a typical interval — large enough to reclassify the
+coda. With C(12,2) = 66 unit assignments, 0.0152 is the finest p the design can
+ever produce.
+
+Not "the clans are the same." *"This cannot tell."* Answering it needs more
+social **units**, not more codas — which is what
+[`experiments/04-pacific-clan-rhythm`](../experiments/04-pacific-clan-rhythm/)
+went and got.
 
 ### What is on it
 
