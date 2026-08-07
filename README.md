@@ -211,6 +211,28 @@ measures, what it cannot, and the documented limits of its IPI estimator.
   composition, not per-coda contamination — modest evidence *against* the crudest
   form of the artifact hypothesis, from the only arm with the power to say so.
 
+- [`08-turn-taking`](experiments/08-turn-taking/) — do sperm whales take turns?
+  The first question in this repo about the **exchange** rather than a single
+  coda. It rests on one structural fact: a whale cannot overlap itself, so
+  **0 of 1,382 same-speaker adjacent pairs overlap while 908 of 2,239
+  cross-speaker pairs do** — meaning 40.6% of all speaker "switches" are forced
+  by simultaneity and carry no information. Statistics are scored only over pairs
+  where both a same-speaker and a cross-speaker continuation were physically
+  possible.
+  **No turn-taking signal survives.** The naive switch-rate excess (z = +2.2)
+  is co-activity: against a ±2 s jitter surrogate that preserves the local
+  activity envelope, z = −0.3, and at ±5 s, z = 0.0. Against a bout-preserving
+  rotation the sign inverts to z = −8.1 — whales alternate *less* than a
+  scrambled arrangement.
+  **What does survive is the opposite of turn-taking.** 39.0% of adjacent
+  cross-speaker pairs overlap in time against 18.4–25.6% in every surrogate,
+  z = 9.6–12.7, **p = 0.0005 in all eight nulls**. Two independent DTags on the
+  same encounter agree on the rate (0.413/0.470, 0.583/0.611, 0.333/0.333),
+  which rules out random attribution error but not a systematic one. A third
+  statistic, median response gap, is reported and explicitly discounted: the
+  surrogates admit 930–972 comparable pairs against the observed 839, so the
+  comparison is not like with like.
+
 ## Planned experiments
 
 Tracked in [`CLAUDE.md`](CLAUDE.md), ordered by effort:
