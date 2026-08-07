@@ -1,7 +1,9 @@
 # 07 — Is the coda-vowel distinction a recording or analysis artifact?
 
-**Status: OPEN. One result established (the measurement grid). The artifact test
-itself is not yet run and is not yet fully pre-registered.**
+**Status: OPEN. Two results established — the measurement grid, and the
+individual-versus-composition test across three levels of clustering. The
+recording-artifact test itself is blocked on a rig label per coda, which
+experiment 06 could not deliver.**
 
 ## Question
 
@@ -102,29 +104,207 @@ analysis code or a rig label joined to each coda — and
 [experiment 06](../06-audio-annotation-join/) established that the audio↔annotation
 join is not recoverable with this repo's measurement chain.
 
-## Also established, from the annotation table alone
+## Is the vowel a property of the individual, or of repertoire composition?
 
-A first pass on individual-level vowel usage, 1,142 hand-labelled codas, 13 named
-whales, using this repo's stratified-permutation machinery:
+`tools/exp07_vowel_individual.mjs`. Pre-registered: `MIN_N` 15, `MIN_LEVERAGE`
+33.3, 4,000 shuffles, seed 707, FDR at q < 0.05, all fixed before any p was run.
 
-| null | z | p | explained by null |
+Rendell's mechanism runs through click structure, and intra-click pulse spacing
+scales with body size. If the a/i categories track that, vowel should be a stable
+property of an **animal**. If it is phonology, it should vary within an animal by
+context. So: do named whales differ in vowel usage?
+
+They differ enormously at face value — SOURSOP 0%, SAM 9.6%, TWEAK 13.3% against
+SOPH 50%, PINCHY 44.3%, ATWOOD 42.1%. But whales differ in repertoire (ATWOOD is
+260/359 type `1+1+3`; SAM is 45/52 type `5R1`) and **coda type predicts vowel on
+its own**: `1+1+3` is 46.1% "i", `5R1` is 7.7%, `8i` is 0.0%. This is experiment
+01's composition confound one level up.
+
+### Leverage first, before any p-value
+
+Within-coda-type leverage — Σ over shared types of *n₁n₂/(n₁+n₂)* — for all 45
+whale pairs:
+
+```
+36 pairs   median leverage 18.4   range 2.7 - 131.7
+28 of 36 pairs fall BELOW experiment 01's leverage of 33.3
+```
+
+Experiment 01 declared a design with leverage 33.3 **underpowered**. Over
+three-quarters of the whale pairs here sit below that, so they were excluded from
+testing rather than reported with p-values that could not mean anything. The
+threshold was fixed in advance.
+
+(Counts are over the 1,115 codas that survive the bout join below, so they differ
+slightly from a pass on the raw vowel table: 9 whales clear `MIN_N` rather than
+10, and JOCASTA/PINCHY falls just under the leverage threshold.)
+
+### The bout join
+
+`tools/exp07_join_bouts.py`. The vowel deposit carries named individuals but no
+recording identifier; `sperm-whale-dialogues.csv` carries `REC` — the DTag
+sub-recording — but no vowel labels. They join on **`Duration`**.
+
+That key works here for a reason that experiment 06 established by failing: this
+is an **exact float match between two tables that inherit the same annotated
+numbers**, a shared primary key rather than a measurement. Matching a *measured*
+duration against these tables is hopeless — 3.1% unique at 0.5 ms tolerance.
+
+```
+codamd 1,375   dialogues 3,840
+uniquely matched  1,297 (94.3%)    ambiguous 30    unmatched 48
+
+V1  every joined row is dialogue speaker index 1 (focal-only)      PASS
+V2  nClicks agrees with the codatype-implied count  1,293/1,297    PASS  99.7%
+S   unattributed rows (blank `whale`): 58, of which 0 vowel-labelled — dropped
+V3  bouts spanning >1 named whale         0 of 135                 PASS
+V4  deployments spanning >1 named whale   0 of 20                  PASS
+V5  dialogue rows claimed by >1 named vowel row   0                PASS
+```
+
+Two of those checks earned their place on the first run.
+
+**The blank-`whale` sentinel.** 108 rows carry an empty whale name. Read naively
+it becomes a 14th animal, and two bouts then appear to span two whales — which is
+what V3 caught. It is the same trap family as `IDN == 0` in `DominicaCodas.csv`
+(unidentified, not whale zero) and the `ZZZ` unknown-unit sentinel that
+manufactured C(13,3) in experiment 01. None of the 108 carry a vowel label, so
+dropping them costs this analysis nothing.
+
+**V5, injectivity the other way.** A duration unique on the dialogue side can
+still be claimed by two vowel rows. Checking one direction only would have missed
+it: exactly one such collision exists — PINCHY's `1+1+3` and an unnamed `5R3`,
+both at 1.1856 s — and dropping the sentinel resolves it.
+
+Result: **1,115 vowel-labelled codas across 135 bouts, 20 deployments, 13 named
+whales.**
+
+### The structure that decides what is answerable
+
+| whale | codas | bouts | deployments |
 |---|---|---|---|
-| free shuffle | +3.84 | 0.0023 | 47.6% |
-| **shuffle within coda type** | **+1.37** | **0.0923** | **84.6%** |
+| ATWOOD | 354 | 17 | **1** |
+| FORK | 288 | 32 | 3 |
+| PINCHY | 139 | 17 | **1** |
+| TBB | 109 | 16 | 3 |
+| JOCASTA | 53 | 11 | 2 |
+| SAM | 49 | 8 | **1** |
+| FRUIT | 32 | 6 | **1** |
+| LAIUS | 29 | 5 | 2 |
+| SOPH | 27 | 4 | **1** |
 
-**85% of the apparent individual-level vowel effect is repertoire composition** —
-experiment 01's confound, one level up. The raw cross-tabulation is stark: coda
-type `1+1+3` is 46.1% "i" while `5R1` is 7.7% and `8i` is 0.0%, so vowel is
-substantially predicted by which coda type an animal produces.
+**9 of 13 whales were recorded in exactly one deployment.** Whale identity is
+therefore near-perfectly confounded with recording session: for most animals
+there is no way to ask whether this whale sounds different or this *tag
+deployment* sounds different, because there is only one. That is the same shape
+as experiment 04's Palindrome result, where every apparent clan effect turned out
+to be recording era.
 
-Two caveats, both load-bearing. This is a preliminary pass, not a pre-registered
-test. And p = 0.0923 over 10 whales with n ≥ 15 is **underpowered, not null** —
-the same trap experiment 01 fell into and had to retract twice.
+### The eight testable pairs — arm A
 
-One detail worth chasing: **`6-NOISE` codas show the highest "i" rate in the
+| pair | leverage | observed | null | explained by null | p | q |
+|---|---|---|---|---|---|---|
+| ATWOOD/FORK | 131.7 | 0.045 | 0.031 | 69% | 0.2722 | 0.3629 |
+| ATWOOD/PINCHY | 91.8 | 0.012 | 0.038 | — | 0.8295 | 0.8295 |
+| FORK/PINCHY | 77.3 | 0.057 | 0.055 | 96% | 0.4589 | 0.5244 |
+| ATWOOD/TBB | 66.7 | 0.179 | 0.141 | 79% | 0.2299 | 0.3629 |
+| PINCHY/TBB | 50.8 | 0.191 | 0.119 | 62% | 0.1127 | 0.3006 |
+| FORK/TBB | 43.0 | 0.134 | 0.065 | 49% | 0.0502 | 0.2009 |
+| **ATWOOD/JOCASTA** | 41.7 | 0.276 | 0.137 | 50% | **0.0082** | 0.0660 |
+| JOCASTA/TBB | 34.2 | 0.097 | 0.061 | 63% | 0.2567 | 0.3629 |
+
+**FDR across the 8 tested pairs: 0 significant at q < 0.05.**
+
+ATWOOD/JOCASTA (p = 0.0082) would read as a finding uncorrected. It does not
+clear Benjamini-Hochberg at rank 1, where the threshold is 0.0063. The
+`explained by null` column is the substantive result: **49–96% of every raw
+between-whale difference is repertoire composition**, and for ATWOOD/PINCHY the
+null exceeds the observed, so no percentage is quoted — the guard experiment 01
+installed for exactly this case.
+
+### What this does and does not say
+
+**It does not say vowel is independent of the individual.** It is a null from an
+underpowered design, and that distinction is the single most-repeated lesson in
+this repo — experiment 01 published "null result" twice and had to retract it
+both times before settling on "underpowered, cannot tell."
+
+What it says: **the public vowel data cannot demonstrate that vowel usage is an
+individual property, and most of the apparent individual signal is which codas
+each whale produces.**
+
+### The clustered arms — the ladder
+
+Arm A above permutes at coda level, treating codas from one whale in one bout as
+independent draws. Experiment 04 measured that substitution against ground truth
+and found it **anti-conservative**: 101 of 126 true-null splits shifted *p*
+downward, sign test p = 5e-12. So arms B and C re-run the identical statistic
+through the shipped joint null — residualise by coda type, then permute whale
+across whole clusters.
+
+| arm | permutation unit | negative control | significant | not testable |
+|---|---|---|---|---|
+| **A** | coda | 1/28 = 3.6% | 0 of 8 | — |
+| **B** | **bout** (135) | 0/24 = 0.0% | 0 of 8 | — |
+| **C** | **deployment** (20) | **cannot be run** | 0 of 1 | **7 of 8** |
+
+The negative control splits a single whale against itself, which is a true null by
+construction; for the clustered arms the split is over whole bouts, since
+splitting codas would hand the permutation a structure the real design never has.
+Arms A and B sit at or below the nominal 5%. **Arm C cannot run one at all** — no
+within-whale split has enough deployments — which is the same fact the ladder
+reports, arriving from the other direction.
+
+Arm B has no resolution problem whatsoever — assignment counts run from 1.3 × 10⁷
+to 6.5 × 10¹², so unlike experiment 01's C(12,2) = 66 there is no floor anywhere
+near the decision threshold. What changes is the p-values:
+
+| pair | leverage | p, arm A (coda) | p, arm B (bout) |
+|---|---|---|---|
+| **ATWOOD/JOCASTA** | 41.7 | **0.0082** | **0.3857** |
+| FORK/TBB | 43.0 | 0.0502 | 0.5604 |
+| PINCHY/TBB | 50.8 | 0.1127 | 0.5431 |
+| ATWOOD/TBB | 66.7 | 0.2299 | 0.7976 |
+| ATWOOD/FORK | 131.7 | 0.2722 | 0.8078 |
+
+**ATWOOD/JOCASTA moves from p = 0.0082 to p = 0.3857 — a factor of 47 — purely
+by counting bouts instead of codas.** It was the strongest pair in arm A and the
+one that came closest to surviving FDR. Experiment 04 predicted this direction
+from a ground-truth calibration on a different corpus, and it reproduces here.
+
+Arm C is where the design runs out. Only **FORK/TBB** has enough deployments to
+permute at all (3 + 3, C(6,3) = 20, a floor of exactly 0.05); the other seven
+pairs have C = 2, 3, 4, 4, 4, 4 and 10. Those are recorded as **not testable**,
+not as nulls — the distinction experiment 04 insisted on for its eight
+non-computable clan pairs.
+
+**Every arm returns nothing significant, and each arm returns nothing for a
+different reason**: arm A because the composition null already absorbs 51–164% of
+the raw difference, arm B because bout-level clustering removes what remained,
+arm C because whale identity and recording session are the same variable for 9 of
+13 animals.
+
+One detail still worth chasing: **`6-NOISE` codas show the highest "i" rate in the
 corpus at 64.5%.** Noise-labelled codas being the most vowel-positive, in a corpus
 whose own authors have shown the vowel measure responds to ambient noise, is a
 convergence rather than a coincidence.
+
+## Infrastructure this required
+
+`permutationTest` in `explorer/js/rhythm.js` **threw** when `strata` and
+`clusters` were supplied together — the one test experiment 01 needed, which had
+to be written by hand outside the module. It now runs the joint null: residualise
+each item against its stratum mean, then permute labels across whole clusters.
+
+Every joint result carries **`leverage`**, the effective within-stratum sample
+size, beside `p`. Experiment 01 established that a joint p is uninterpretable
+without it. Validated against that experiment's published figures — leverage
+33.31 on 6,038 codas across 12 social units, C(12,2) = 66 assignments enumerated
+exactly, reproducing the observed 0.00145 — and the exact p of 64/66 = 0.9697
+replaces the seed-dependent 0.9630 that wobbled across 0.9630/0.9660/0.9715/0.9770.
+
+Twelve new assertions; suite now 311 across four suites, byte-identical across
+runs.
 
 ## Next, and not yet run
 
@@ -143,7 +323,8 @@ convergence rather than a coincidence.
 ## Reproducing
 
 ```bash
-python3 tools/exp07_vowel_grid.py     # fetches codasp.csv, recovers the grid
+python3 tools/exp07_vowel_grid.py           # fetches codasp.csv, recovers the grid
+node    tools/exp07_vowel_individual.mjs    # leverage pass, then the pairwise test
 ```
 
 The deposit is public (`Project-CETI/coda-vowel-phonology`, OSF `9t6qu`). Fetched

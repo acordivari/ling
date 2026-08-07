@@ -270,3 +270,38 @@ p exactly.
   the data it appears to.
 - **Function untested.** That timing correlates with clan says nothing about
   whether whales perceive or use it.
+
+## Addendum, 2026-08-06 — the joint null is now in the shipped API
+
+The decisive test on this page had to be written by hand, because
+`permutationTest` in `explorer/js/rhythm.js` **threw** when `strata` and
+`clusters` were supplied together. That refusal is part of how three superseded
+conclusions got published here: each single-confound null left a residual, and
+the test that dissolved it lived outside the module that everything else used.
+
+It now runs the joint null directly — residualise against stratum means, then
+permute labels across clusters — and reproduces this experiment's numbers:
+
+```
+five-click codas, ZZZ sentinel excluded              n = 6,038
+clusters                            12 social units, C(12,2) = 66, enumerated exactly
+observed (residualised separation)  0.00145      as published here
+leverage                            33.31        as published here (33.3 of 6,038)
+informative strata                  2            crossover cells 1+1+3 and 5R3
+exact p                             64/66 = 0.9697
+```
+
+Two things changed rather than merely moved.
+
+**The p is now exact.** The sampled version printed 0.9630 / 0.9660 / 0.9715 /
+0.9770 across seeds against a resolution unit of 1/66. With 66 assignments
+enumerated there is no seed to report.
+
+**`leverage` is returned beside `p`, always.** This experiment's central lesson is
+that the joint p was uninterpretable on its own — 0.9630 came from a design that
+ranked 1 of 66 in sensitivity on precisely the split under test, 17.7× below the
+median. The number that would have caught it is now impossible to omit.
+
+**None of this changes the conclusion.** It remains (3): the design is
+underpowered and cannot answer the question, cited with caveat (4) that the rank
+is soft. 33.3 codas of 6,038 is 0.55% of the rows a naive reading assumes.

@@ -457,9 +457,68 @@ console.log("\n== cluster-level permutation ==");
   } catch { threw = true; }
   ok(threw, "rejects a cluster that spans more than one label");
 
-  threw = false;
-  try { permutationTest({ items, labels, clusters, strata: clusters, statistic: stat, iterations: 10 }); } catch { threw = true; }
-  ok(threw, "rejects clusters and strata used together");
+}
+
+console.log("\n== joint strata x clusters: both confounds controlled at once ==");
+{
+  // The test experiment 01 actually needed. Controlling composition alone left
+  // 1.0% "surviving"; controlling non-independence alone left p = 0.0152. Only
+  // running both together showed there was nothing there.
+  //
+  // Built so the right answer is known by construction: the ONLY thing
+  // separating the two groups is which stratum they sit in. Within a stratum
+  // the groups are identical, so a null that removes stratum means must return
+  // an observed statistic of EXACTLY zero.
+  const items = [], labels = [], strata = [], clusters = [];
+  // stratum S1 carries value 10, S2 carries 20. A is 8/2 across them, B is 2/8.
+  const push = (v, s, l, c) => { items.push(v); strata.push(s); labels.push(l); clusters.push(c); };
+  for (let i = 0; i < 8; i++) push(10, "S1", "A", `cA${i % 5}`);
+  for (let i = 0; i < 2; i++) push(20, "S2", "A", `cA${(i + 3) % 5}`);
+  for (let i = 0; i < 2; i++) push(10, "S1", "B", `cB${i % 5}`);
+  for (let i = 0; i < 8; i++) push(20, "S2", "B", `cB${i % 5}`);
+
+  const mean = (xs) => xs.reduce((s, v) => s + v, 0) / xs.length;
+  const stat = (A, B) => Math.abs(mean(A) - mean(B));
+
+  const naive = permutationTest({ items, labels, statistic: stat, iterations: 500, seed: 3 });
+  ok(Math.abs(naive.observed - 6) < 1e-12,
+    "composition alone separates the group means by exactly 6", `${naive.observed}`);
+
+  const jointR = permutationTest({
+    items, labels, strata, clusters, statistic: stat, iterations: 500, seed: 3, kind: "distance",
+  });
+  ok(jointR.joint === true && jointR.clustered === true && jointR.stratified === true,
+    "joint mode reports itself as both stratified and clustered");
+  ok(Math.abs(jointR.observed) < 1e-12,
+    "residualising within strata removes a pure composition effect EXACTLY",
+    `observed=${jointR.observed}`);
+
+  // leverage = sum over strata of nA*nB/(nA+nB); here 8*2/10 + 2*8/10 = 3.2
+  ok(Math.abs(jointR.leverage - 3.2) < 1e-12,
+    "leverage is the effective within-stratum sample size  (8*2/10 + 2*8/10 = 3.2)",
+    `got ${jointR.leverage}`);
+  ok(jointR.informativeStrata === 2 && jointR.strataCount === 2,
+    "both strata contain both labels, so both are informative");
+
+  // A stratum holding only one label cannot inform a within-stratum contrast.
+  const it2 = items.concat([99, 99]), lb2 = labels.concat(["A", "A"]);
+  const st2 = strata.concat(["S3", "S3"]), cl2 = clusters.concat(["cA0", "cA0"]);
+  const withDead = permutationTest({
+    items: it2, labels: lb2, strata: st2, clusters: cl2, statistic: stat, iterations: 200, seed: 3,
+  });
+  ok(Math.abs(withDead.leverage - 3.2) < 1e-12,
+    "a single-label stratum adds items but ZERO leverage", `got ${withDead.leverage}`);
+  ok(withDead.strataCount === 3 && withDead.informativeStrata === 2,
+    "and is counted as a stratum but not as an informative one");
+
+  // Using the cluster array as strata used to throw. It now answers the more
+  // useful question: every cluster is single-label by construction, so no
+  // stratum can hold both labels and the design has no leverage at all.
+  const degenerate = permutationTest({
+    items, labels, clusters, strata: clusters, statistic: stat, iterations: 200, seed: 3,
+  });
+  ok(degenerate.leverage === 0 && degenerate.informativeStrata === 0,
+    "strata == clusters yields leverage 0 — the design cannot see anything, reported rather than thrown");
 }
 
 console.log("\n== regression: a distance whose null EXCEEDS it must not print a percentage ==");
@@ -557,6 +616,37 @@ console.log("\n== real corpus (skipped unless data/coda-corpus.json exists) ==")
     ok(strat.explainedByNull > 0.95,
       "stratified null explains >95% of the clan effect on real data",
       `explainedByNull=${strat.explainedByNull.toFixed(4)}`);
+
+    // --- the joint null, against experiment 01's published figures ----------
+    // ZZZ is the corpus's own unknown-unit sentinel, not a 13th social unit.
+    // Counting it gives C(13,3)=286 and a p-floor of 0.0035 instead of
+    // C(12,2)=66 and 0.0152 — four times the resolution the design has.
+    const keep = five.filter((i) => corpus.units[corpus.unit[i]] !== "ZZZ");
+    const jItems = keep.map((i) => standardise(corpus.ici[i]));
+    const jLabels = keep.map((i) => clanNames[corpus.clan[i]]);
+    const jStrata = keep.map((i) => corpus.types[corpus.codaType[i]]);
+    const jClusters = keep.map((i) => corpus.units[corpus.unit[i]]);
+
+    const jr = permutationTest({
+      items: jItems, labels: jLabels, strata: jStrata, clusters: jClusters,
+      statistic: sep, iterations: 2000, seed: 1,
+    });
+
+    ok(keep.length === 6038,
+      "excluding the ZZZ sentinel leaves 6,038 five-click codas", `got ${keep.length}`);
+    ok(jr.clusterCount === 12 && jr.distinctAssignments === 66,
+      "12 social units, C(12,2) = 66 distinct assignments — the design's whole resolution",
+      `${jr.clusterCount} units, ${jr.distinctAssignments} assignments`);
+    // Experiment 01 reports "within-type leverage 33.3 codas of 6,038", from
+    // crossover cells of 15 EC2 codas of type 1+1+3 and 19 EC1 codas of 5R3.
+    ok(Math.abs(jr.leverage - 33.3) < 0.1,
+      "joint leverage reproduces experiment 01's published 33.3 codas of 6,038",
+      `got ${jr.leverage.toFixed(2)} from ${jr.informativeStrata} informative strata`);
+    ok(jr.leverage / keep.length < 0.01,
+      "…which is under 1% of the rows a naive reading would assume",
+      `${(100 * jr.leverage / keep.length).toFixed(3)}%`);
+    ok(jr.exhaustive === true,
+      "66 assignments are enumerated exactly, so the joint p carries no seed dependence");
   }
 }
 

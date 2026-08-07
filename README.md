@@ -173,6 +173,24 @@ measures, what it cannot, and the documented limits of its IPI estimator.
   The question it opens — whether a fixed FFT was applied across five sample
   rates without resampling, which would make bin width vary 2.7× with equipment —
   cannot be answered from the public deposit.
+  A second result, pre-registered: **is the vowel a property of the individual,
+  or of repertoire composition?** Leverage was computed for all 45 named-whale
+  pairs *before* any p-value; median 16.0, and **36 of 45 sit below the leverage
+  of the design experiment 01 called underpowered**, so they were not tested.
+  Of the eight that were, **0 survive FDR at q < 0.05**, and 49–96% of every raw
+  between-whale difference is explained by the composition null.
+  The vowel labels were then joined to the dialogue corpus on `Duration` (1,297
+  uniquely matched, five validations passed — including a blank-`whale` sentinel
+  and a reverse-injectivity collision that a one-directional check would have
+  missed), recovering **bout and deployment ids**. Re-run as a ladder: coda-level
+  0 of 8 → **bout-level 0 of 8** → **deployment-level 0 of 1, with 7 of 8 pairs
+  not testable at all**. ATWOOD/JOCASTA, the strongest pair, moves from
+  p = 0.0082 to **p = 0.3857** purely by counting bouts instead of codas — the
+  anti-conservative direction experiment 04 predicted from a ground-truth
+  calibration on a different corpus. And **9 of 13 whales were recorded in
+  exactly one deployment**, so whale identity and recording session are largely
+  the same variable. All of this is an underpowered null, not evidence of no
+  effect — the distinction experiment 01 had to retract twice before getting right.
 
 ## Planned experiments
 

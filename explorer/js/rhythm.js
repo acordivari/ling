@@ -165,6 +165,82 @@ export function euclidean(a, b) {
 // --------------------------------------------------------------- null models
 
 /**
+ * Residualise each item against the mean of its own stratum, and report how
+ * much data actually informs a WITHIN-stratum comparison.
+ *
+ * Subtracting the stratum mean removes between-stratum variation entirely, so a
+ * statistic computed on the residuals cannot be driven by composition — by
+ * WHICH strata each group occupies. Only within-stratum differences survive.
+ * Residuals depend on `strata` alone and never on `labels`, so this is done once
+ * before permuting rather than inside the loop.
+ *
+ * `leverage` is the effective sample size for the contrast:
+ *
+ *     leverage = SUM over strata of  (nA * nB) / (nA + nB)
+ *
+ * A stratum holding only one label contributes nothing — there is no
+ * within-stratum comparison to make — which is why the raw item count badly
+ * overstates what a joint test can see. On the Dominica corpus this evaluates to
+ * 33.3 codas out of 6,038, against the 8,112 rows a naive reading would assume.
+ * Experiment 01 established that a joint-null p-value is uninterpretable without
+ * it: p = 0.9630 there came from a design that ranked 1 of 66 in sensitivity on
+ * precisely the split under test, 17.7x below the median. Reported beside every
+ * joint result for that reason.
+ */
+function residualiseWithinStrata(items, labels, strata) {
+  const n = items.length;
+  const byStratum = new Map();
+  for (let i = 0; i < n; i++) {
+    const k = strata[i];
+    if (!byStratum.has(k)) byStratum.set(k, []);
+    byStratum.get(k).push(i);
+  }
+
+  const vector = Array.isArray(items[0]);
+  const dim = vector ? items[0].length : 0;
+  if (vector) {
+    for (let i = 0; i < n; i++) {
+      if (!Array.isArray(items[i]) || items[i].length !== dim) {
+        throw new Error("joint strata x clusters needs items of equal length to residualise");
+      }
+    }
+  }
+
+  const residuals = new Array(n);
+  let leverage = 0;
+  let informative = 0;
+
+  for (const idx of byStratum.values()) {
+    if (vector) {
+      const m = new Array(dim).fill(0);
+      for (const i of idx) for (let j = 0; j < dim; j++) m[j] += items[i][j];
+      for (let j = 0; j < dim; j++) m[j] /= idx.length;
+      for (const i of idx) residuals[i] = items[i].map((v, j) => v - m[j]);
+    } else {
+      let m = 0;
+      for (const i of idx) m += items[i];
+      m /= idx.length;
+      for (const i of idx) residuals[i] = items[i] - m;
+    }
+
+    const counts = new Map();
+    for (const i of idx) counts.set(labels[i], (counts.get(labels[i]) || 0) + 1);
+    if (counts.size === 2) {
+      const [a, b] = [...counts.values()];
+      leverage += (a * b) / (a + b);
+      informative++;
+    }
+  }
+
+  return {
+    residuals,
+    leverage,
+    informativeStrata: informative,
+    strataCount: byStratum.size,
+  };
+}
+
+/**
  * Permutation test with optional stratification.
  *
  * @param items      array of opaque items
@@ -174,8 +250,19 @@ export function euclidean(a, b) {
  *                   only WITHIN each stratum, so the null preserves each
  *                   group's composition across strata. This is what turns
  *                   "the clans differ" into "the clans use different coda types".
+ * @param clusters   optional parallel array; when given, labels are permuted
+ *                   across whole CLUSTERS and broadcast back, so correlated
+ *                   items move together.
  * @param iterations number of shuffles
  * @param seed       integer; the same seed gives the same p-value, always
+ *
+ * Supplying BOTH `strata` and `clusters` runs the joint null: items are
+ * residualised against their stratum mean, then labels are permuted across
+ * clusters. This controls composition and non-independence AT THE SAME TIME.
+ * Controlling either alone leaves a residual that looks like a finding —
+ * experiment 01 reported p < 0.0005 stratified and p = 0.0152 clustered, and
+ * nothing survived once both ran together. The joint result always carries
+ * `leverage`; read it before reading `p`.
  *
  * Returns the observed statistic, the null distribution's summary, a p-value,
  * and — the field that matters most — `explainedByNull`.
@@ -185,7 +272,28 @@ export function permutationTest({ items, labels, statistic, strata = null, clust
   if (n !== labels.length) throw new Error("items and labels must be the same length");
   if (strata && strata.length !== n) throw new Error("strata must be the same length as items");
   if (clusters && clusters.length !== n) throw new Error("clusters must be the same length as items");
-  if (clusters && strata) throw new Error("clusters and strata cannot be combined");
+
+  // ---- joint strata x clusters -------------------------------------------
+  //
+  // Residualise against stratum means, then permute across clusters. This used
+  // to throw. It was the one test experiment 01 actually needed, and refusing
+  // to provide it meant the decisive analysis had to be written by hand outside
+  // this module — which is how three superseded conclusions got published from
+  // single-confound nulls that each left a residual.
+  //
+  // `joint` is null unless both were supplied, so every existing caller keeps
+  // its exact behaviour.
+  const joint = (clusters && strata) ? residualiseWithinStrata(items, labels, strata) : null;
+  if (joint) items = joint.residuals;
+
+  // Spread into every cluster-branch return. `leverage` sits beside `p` so a
+  // caller cannot read one without seeing the other.
+  const jointFields = joint
+    ? { stratified: true, joint: true, residualised: true,
+        leverage: joint.leverage,
+        informativeStrata: joint.informativeStrata,
+        strataCount: joint.strataCount }
+    : { stratified: false, joint: false };
 
   // ---- cluster-level permutation ----------------------------------------
   //
@@ -266,7 +374,7 @@ export function permutationTest({ items, labels, statistic, strata = null, clust
       for (let i = 0; i < comb; i++) if (dist[i] >= observedEx) atLeast++;
       const res = summarise(observedEx, dist, comb, kind);
       return {
-        ...res, seed, stratified: false, clustered: true, exhaustive: true,
+        ...res, seed, ...jointFields, clustered: true, exhaustive: true,
         clusterCount: keys.length, distinctAssignments: comb,
         p: atLeast / comb,                       // exact, not (k+1)/(n+1)
         pResolutionLimit: 1 / comb,
@@ -287,7 +395,7 @@ export function permutationTest({ items, labels, statistic, strata = null, clust
 
     const res = summarise(observed, dist, iterations, kind);
     return {
-      ...res, seed, stratified: false, clustered: true, exhaustive: false,
+      ...res, seed, ...jointFields, clustered: true, exhaustive: false,
       clusterCount: keys.length,
       distinctAssignments: comb,
       // The p-value cannot be finer than 1/comb no matter how many shuffles run.
