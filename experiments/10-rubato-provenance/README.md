@@ -1,6 +1,8 @@
 # 10 — Does rubato carry state signatures beyond the exchange?
 
-**Status: FROZEN 2026-08-07. No test statistic has been computed.**
+**Status: RUN 2026-08-07. Frozen text unchanged; results in
+[Result](#result). Matrix row 3; the registered predictions scored one hit,
+two misses, one unevaluated.**
 
 Freeze note: five adversarial review rounds (47 findings total: 27/11/4/5/0
 critical-or-major by round, four personas — statistics, bioacoustics,
@@ -774,6 +776,111 @@ headline of a non-detection on material where the drift was not measured.
   material dominated by sub-minute annotator-cut excerpts.
 - **Anything about meaning, individuals, or class-17 codas** — exp09's limits
   carry over unchanged.
+
+## Result
+
+**The machinery validated everywhere and the whale mostly declined to
+cooperate with the state story — and entirely declined to support the
+imitation one.** Every negative control passed (max 5/40 against threshold
+6/40); the placebo battery passed at every arm in all four synthetic worlds
+(T3-P notably at 0/40: the jitter co-null absorbs the shared-envelope
+channel exactly as designed). All three statistics were tested. Matrix
+**row 3** (T2 null, T3 null), with sub-case (b) and a T1 partial fire.
+`tools/exp10_rubato_provenance.mjs`, `artifacts/rubato_provenance.json`,
+deterministic.
+
+### T1 — gap coupling: present at four of five cuts; does not survive
+
+| GAP | partial-r | z | p | raw(sil) | raw(IOI) |
+|---|---|---|---|---|---|
+| 3 s | 0.167 | 2.2 | **0.030** | 0.164 | 0.198 |
+| 5 s | 0.076 | 1.9 | 0.057 | 0.075 | 0.135 |
+| 10 s | 0.119 | 4.3 | **0.001** | 0.091 | 0.130 |
+| 15 s | 0.107 | 3.6 | **0.002** | 0.089 | 0.122 |
+| 30 s | 0.120 | 4.5 | **0.001** | 0.091 | 0.113 |
+
+Sign-consistent positive everywhere; the 5 s arm missed at p = 0.057, so by
+the frozen criterion T1 **does not survive**, and the fired set
+{3, 10, 15, 30} matches none of the three registered arm-patterns — the
+registered narrative label is **generic cut-dependence**, and the frozen
+precedence rule forbids upgrading it. The scored prediction
+(fires-positive-sign-consistent) is a **miss**. What may be said: a positive
+partial gap-coupling — longer preceding silence, longer coda, with the
+mechanical channel partialled out — appears at four cuts including every
+wide one, and its registered reading stops at the label above.
+
+### T2 — persistence at short and mid cuts; not beyond the exchange
+
+| GAP | units | lag1-r | z | p | sw061 share | LODO worst p | sep median / ≥30 s |
+|---|---|---|---|---|---|---|---|
+| 3 s | 41 | 0.178 | 3.9 | **0.0005** | 72% | 0.063 | 13.2 s / 28% |
+| 5 s | 55 | 0.343 | 6.5 | **0.0005** | 65% | 0.005 | 12.6 s / 22% |
+| 10 s | 22 | 0.326 | 4.6 | **0.0010** | 79% | 0.001 | 22.3 s / 39% |
+| 15 s | 12 | 0.143 | 2.2 | **0.0145** | 87% | 0.026 | 37.3 s / 59% |
+| 30 s | 6 | 0.002 | 0.7 | 0.224 | 95% | 0.239 | 112.6 s / 100% |
+
+Four arms fire; the GAP-30 arm — the only one whose separations are all
+≥ 30 s — does not (6 units, 44 pairs, the widest nulls in the design).
+**Sub-case (b), as registered: scale-limited persistence at the fired
+arms.** Persistence is established across separations with medians 13–37 s;
+it is *not* established beyond the widest fired gap; the 30 s miss is a
+non-detection there, not evidence against a state process; and "local to
+the exchange" may not be asserted. The registered concentration qualifier
+**triggered** (the 3 s arm's worst leave-one-deployment-out case loses
+significance at p = 0.063): concentrated in one annotation scene —
+consistent with block-wise attribution error as well as state; the state
+reading is not licensed at full strength. The scored prediction (fires) is
+a **miss**.
+
+### T3 — the covariation is real, and the envelope explains all of it
+
+| W | pairs | r | rotation p | jitter-2 p | jitter-5 p | overlap share |
+|---|---|---|---|---|---|---|
+| 5 s | 451 | 0.302 | **0.008** | 0.62 | 0.48 | 51% |
+| 10 s | 525 | 0.264 | **0.012** | 0.82 | 0.65 | 41% |
+| 30 s | 384 | 0.211 | **0.025** | 0.97 | 0.83 | 35% |
+
+Nearby codas from different whales really do covary in tempo deviation —
+r = 0.30 at the primary arm, firing the rotation null at every window, and
+not removed by controlling each whale's own preceding silence (partial
+r = 0.32). **And the envelope-preserving jitter null reproduces every bit
+of it** (p = 0.48–0.97). The registered pre-assigned reading applies
+verbatim: *co-activity plus private state, or fine alignment below the
+co-null's discrimination at the reported retention; no evidence of tempo
+concurrence at that discrimination* (retention: rotation 12.8%, J2 89.9%,
+J5 67.7% — the J2 arm re-derives ~90% of pairs identically, so its
+discrimination is limited and was registered as such before freezing). T3
+does not survive; prediction clause (i) is a **hit**; clause (ii) is
+unevaluated (conditional on a surviving fire). The non-overlap stratum
+(r = 0.28, n = 222) is not stable in the pinned sense, which bears no
+reading on a non-surviving T3.
+
+**Bearing on the published imitation sub-claim, in the registered senses
+only:** Sharma et al. read overlap-pair duration matching (0.099 s vs
+0.129 s, n = 908) as rubato "perceived and imitated." This experiment finds
+the corresponding covariation in the same corpus — and finds that a null
+preserving only the joint activity envelope, with zero cross-whale
+coupling, reproduces it at every window. That is a **non-detection of
+imitation under the two controls the published comparison does not apply**,
+at the reported discrimination, on the two-speaker subset — registered in
+advance as exactly that, and not as a demonstration that the published
+effect is artifact.
+
+### Scorecard and what stands
+
+Predictions: T1 fires-positive — miss (partial fire); T2 fires — miss
+(scale-limited); T3(i) no survival — hit; T3(ii) — unevaluated. One hit,
+two misses, one unevaluated: the deflationary stance itself over-predicted
+how much state signature the corpus would certify.
+
+After experiments 09 and 10 together, what stands about rubato: the
+within-exchange smooth drift is real and robust (09); its tempo state shows
+scale-limited persistence concentrated in one annotation scene, a positive
+but cut-dependent coupling to calling pace, and cross-whale covariation
+fully absorbed by co-activity (10). Nothing here identifies a driver;
+nothing here affirms signal; and the strongest published evidence for
+communicative use of rubato — imitation — has now been tested under the
+controls its original analysis lacked, and did not survive them.
 
 ## Reproducing
 

@@ -1,7 +1,7 @@
 # Ornamentation and rubato in sperm whale codas: an independent, pre-registered control using the authors' own classifications
 
-**Status: DRAFT. Experiment 10 (rubato provenance) is registered and pending;
-its section is marked. Nothing here has been submitted anywhere.**
+**Status: DRAFT, complete through experiment 10. Nothing here has been
+submitted anywhere.**
 
 Author: Andrew Cordivari
 Code and data: `github.com/<user>/ling` (all inputs public; every statistic
@@ -32,9 +32,16 @@ composition-preserving nulls at every segmentation cut (z = 6.4–19.4,
 permutation floor p = 0.0005), is robust to leave-one-recording-out, and holds
 inside single rhythm classes, where click count is invariant and duration is
 pure inter-click timing. Smooth tempo modulation in sperm whale codas is
-real structure; whether it is signal or physiological state remains open, and
-a registered follow-up (cross-whale concurrence under timeline-rotation nulls)
-is in progress.
+real structure. A registered follow-up (experiment 10) then tested its
+provenance: tempo deviations of nearby codas from different whales covary
+(r = 0.30) — the signature behind the paper's "perceived and imitated"
+reading — but an envelope-preserving jitter null with zero cross-whale
+coupling reproduces the covariation entirely (p = 0.48–0.97 at every
+window). The strongest published evidence for communicative use of rubato
+does not survive the two controls its original analysis lacked, at the
+reported discrimination; within-whale persistence is scale-limited and
+concentrated in a single annotation scene. Rubato stands as structure;
+its use remains undemonstrated.
 
 ---
 
@@ -238,7 +245,7 @@ machinery.
 |---|---|
 | Adjacent same-type duration drift smaller than chance (rubato a) | **Supported and strengthened** — survives composition + segmentation controls the original test does not apply |
 | Drift direction sustained across sequences (rubato b) | **Consistent** — long strictly-monotone duration runs occur far above chance (e.g. 3/32 length-7 fragments vs ~0.04% expected) |
-| Overlapping whales' durations match: rubato "perceived and imitated" (rubato c) | **Not yet controlled.** The published test compares overlapping to non-overlapping pairs without controlling temporal proximity — and since each whale drifts smoothly (§5.2), proximity alone predicts matching. A registered follow-up (experiment 10) tests concurrence under timeline-rotation nulls that preserve each whale's private drift. *[pending]* |
+| Overlapping whales' durations match: rubato "perceived and imitated" (rubato c) | **Does not survive the missing controls** (experiment 10, pre-registered and adversarially reviewed over five rounds). The covariation is real — r = 0.30 among nearby codas, firing a timeline-rotation null at every window — but a jitter null preserving only the joint activity envelope, with zero cross-whale coupling by construction, reproduces all of it (p = 0.48–0.97). Registered reading: co-activity plus private state, or fine alignment below the co-null's discrimination (the ±2 s jitter re-derives ~90% of pairs identically, a resolution limit registered before freezing). A non-detection of imitation under the controls the published comparison does not apply — not a demonstration that the published effect is artifact. Had a fire survived but failed the overlap-stability check, the registration notes two generators this corpus cannot separate (split-train annotation and genuine chorus-confined imitation); that branch did not occur. |
 | Ornaments mark sequence beginnings (OR 2.00) | **Does not survive** class-stratified control at any segmentation cut |
 | Ornaments mark sequence ends (OR 1.71) | **Cut-dependent**: survives only at 10–15 s, bracketing the flag's own 10 s definitional window; a third to half of the naive effect is class composition |
 | Ornamented codas rhythmically closer to neighbours minus final click | Untested here |
@@ -254,12 +261,22 @@ such structure. Ornamentation's positional signature, on this corpus and
 under these controls, is not.
 
 Rubato's survival is a statement about structure, not use. Smooth tempo
-modulation is what respiration, arousal or dive phase would also produce;
-nothing here distinguishes modulation-as-signal from modulation-as-state, and
-the paper's imitation claim — the strongest evidence for the signal reading —
-is precisely the sub-claim whose published test lacks the proximity control.
-Experiment 10 (pre-registered, in progress) addresses this directly.
-*[section to be completed when experiment 10 reports]*
+modulation is what respiration, arousal or dive phase would also produce.
+Experiment 10 — pre-registered, frozen after five adversarial review rounds,
+with every null validated by negative controls and a synthetic-placebo
+battery before any statistic ran — tested three provenance signatures. Gap
+coupling (longer preceding silence, longer coda) is positive at four of five
+segmentation cuts but fails the registered every-cut criterion. Exchange-mean
+tempo persists across separations of median 13–37 s but not across the
+all-≥30 s arm, and the persistence is 65–95% concentrated in one continuous
+recording scene where a registered qualifier limits the state reading.
+Cross-whale concurrence — the imitation signature — is fully absorbed by the
+activity envelope (above). The registered predictions scored one hit and two
+misses: the corpus certified *less* state signature than the deflationary
+registration predicted, while still affirming no signal. The honest summary
+of both experiments: sperm whale rubato is robust structure whose driver and
+function remain undetermined, and the one published claim of communicative
+use does not survive independent control.
 
 Tempo, the third dimension, is out of scope: the deposit's tempo labels
 reconstruct per-coda durations for only 93.3% of rows, so we declined to

@@ -384,6 +384,32 @@ L=7 — and 3 of 32 length-7 fragments are monotone at 5 s and again at 10 s.
 Cell counts are small and the cells are not independent across gaps; this table
 is diagnostic context for S2, not a test. The test is the autocorrelation.
 
+### Post-hoc positional arms and the definitional window, not pre-registered
+
+Two additions made after the registered run, both flagged (2026-08-07,
+`tools/exp09_posthoc.mjs` section 2):
+
+**The paper's other positional claims.** Sharma et al. report ornaments at
+sequence *beginnings* (Fisher OR 2.00, p = 0.0006) and *ends* (OR 1.71,
+p = 0.008); registered S1 tested finals only. Under the same within-class
+stratified null: the **initial-position contrast never survives at any cut**
+(p = 0.076–0.75 across the five gaps) — the paper's stronger odds ratio has
+no within-class positional support in this universe. The pooled **edge**
+contrast (first-or-last vs interior) fires at 10/15/30 s (p = 0.0010,
+0.0020, 0.041) and is absent at 3 and 5 s — the same cut-dependence
+signature as the registered final-position arm.
+
+**The definitional window.** The paper's ornament flag is operationally
+defined relative to neighbouring codas **within a ten-second window** ("one
+more click than the nearest preceding/following coda within a ten-second
+window"). The only cuts at which any positional arm fires (10–30 s, led by
+10–15 s) sit at and above that construction window; every arm is null at
+cuts finer than it. An effect that lives only at the segmentation scale its
+own label was built at is the trap this experiment's sweep exists to catch.
+Recorded post-hoc: the sweep values were fixed before this correspondence
+was noticed, so the alignment is an observation about the outcome, not a
+designed test.
+
 ### Post-hoc robustness, not pre-registered
 
 `tools/exp09_posthoc.mjs`, run after the sweep falsified the prediction,

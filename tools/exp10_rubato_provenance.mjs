@@ -406,14 +406,16 @@ function t3Test(recs, W, seed, stratum = "all", iterations = ITERATIONS) {
   const { r: observed, n } = t3Statistic(recs, W, null, stratum);
   const out = { observed, n };
   const rot = t3Null(recs, W, seed, "rotate", 0, stratum, iterations);
+  const rotP = pvals(observed, rot.dist);
   out.rotation = { nullMean: mean(rot.dist), z: (observed - mean(rot.dist)) / sd(rot.dist),
-                   p: pvals(observed, rot.dist).pG, meanN: rot.meanN, retention: rot.retention,
+                   p: rotP.pG, pLess: rotP.pL, meanN: rot.meanN, retention: rot.retention,
                    q95: quantile(rot.dist, 0.95) };
   out.jitter = {};
   for (const J of JITTERS) {
     const jd = t3Null(recs, W, seed + J, "jitter", J, stratum, iterations);
+    const jP = pvals(observed, jd.dist);
     out.jitter[J] = { nullMean: mean(jd.dist), z: (observed - mean(jd.dist)) / sd(jd.dist),
-                      p: pvals(observed, jd.dist).pG, meanN: jd.meanN, retention: jd.retention,
+                      p: jP.pG, pLess: jP.pL, meanN: jd.meanN, retention: jd.retention,
                       q95: quantile(jd.dist, 0.95) };
   }
   out.fires = out.rotation.p < ALPHA && JITTERS.every((J) => out.jitter[J].p < ALPHA);
@@ -501,17 +503,17 @@ for (const gap of GAPS) {
   const frags = t1Fragments(gap);
   let fired = 0;
   for (let k = 0; k < NC_REPEATS; k++) {
-    const rng = makeRng(SEED + 11000 + gap * 100 + k);
+    const rng = makeRng(SEED + 11000 + GAPS.indexOf(gap) * 100 + k);
     const placebo = frags.map((f, fi) => ({ ...f, y: t1NullDraw([frags[fi]], rng)[0] }));
-    if (t1Test(placebo, SEED + 12000 + gap * 100 + k, NC_ITER).p < ALPHA) fired++;
+    if (t1Test(placebo, SEED + 12000 + GAPS.indexOf(gap) * 100 + k, NC_ITER).p < ALPHA) fired++;
   }
   negativeControls.t1[gap] = { fired, ran: NC_REPEATS };
   const units = t2Units(gap);
   let fired2 = 0;
   for (let k = 0; k < NC_REPEATS; k++) {
-    const rng = makeRng(SEED + 13000 + gap * 100 + k);
+    const rng = makeRng(SEED + 13000 + GAPS.indexOf(gap) * 100 + k);
     const placebo = units.map((u) => ({ ...u, runs: shuffleInPlace(u.runs.slice(), rng) }));
-    if (t2Test(placebo, SEED + 14000 + gap * 100 + k, NC_ITER).p < ALPHA) fired2++;
+    if (t2Test(placebo, SEED + 14000 + GAPS.indexOf(gap) * 100 + k, NC_ITER).p < ALPHA) fired2++;
   }
   negativeControls.t2[gap] = { fired: fired2, ran: NC_REPEATS };
 }
@@ -520,14 +522,14 @@ for (const W of WINDOWS) {
   const recs = t3All.filter((rc) => rc.span >= 2 * W);
   let fired = 0;
   for (let k = 0; k < NC_REPEATS; k++) {
-    const rng = makeRng(SEED + 15000 + W * 100 + k);
+    const rng = makeRng(SEED + 15000 + WINDOWS.indexOf(W) * 100 + k);
     // draw once from the rotation null, then run the full conjunction on it
     const shifted = recs.map((rc) => {
       const d = rng() * rc.span;
       const tsB = rc.B.map((r) => rc.lo + ((r.ts - rc.lo + d) % rc.span));
       return { ...rc, B: rc.B.map((r, j) => ({ ...r, ts: tsB[j] })) };
     });
-    if (t3Test(shifted, W, SEED + 16000 + W * 100 + k, "all", NC_ITER).fires) fired++;
+    if (t3Test(shifted, W, SEED + 16000 + WINDOWS.indexOf(W) * 100 + k, "all", NC_ITER).fires) fired++;
   }
   negativeControls.t3[W] = { fired, ran: NC_REPEATS };
 }
@@ -560,7 +562,7 @@ for (const gap of GAPS) {
   // y_i = IOI_i - dur_{i-1}; centering absorbs the cell-mean constant.
   let firedP = 0, firedPp = 0;
   for (let k = 0; k < NC_REPEATS; k++) {
-    const rng = makeRng(SEED + 21000 + gap * 100 + k);
+    const rng = makeRng(SEED + 21000 + GAPS.indexOf(gap) * 100 + k);
     const worldP = scaffolds.map((s) => {
       const r = ar1(s.n + 1, PHI[gap], s.sdRes, rng);
       const x = [], z = [], y = [];
@@ -570,9 +572,9 @@ for (const gap of GAPS) {
       }
       return { x, z, y };
     });
-    if (t1Test(worldP, SEED + 22000 + gap * 100 + k, NC_ITER).p < ALPHA) firedP++;
+    if (t1Test(worldP, SEED + 22000 + GAPS.indexOf(gap) * 100 + k, NC_ITER).p < ALPHA) firedP++;
     // T1-P' (silence-clocked): i.i.d. silences resampled, AR(1) res.
-    const rng2 = makeRng(SEED + 23000 + gap * 100 + k);
+    const rng2 = makeRng(SEED + 23000 + GAPS.indexOf(gap) * 100 + k);
     const worldPp = scaffolds.map((s) => {
       const r = ar1(s.n + 1, PHI[gap], s.sdRes, rng2);
       const x = [], z = [], y = [];
@@ -582,7 +584,7 @@ for (const gap of GAPS) {
       }
       return { x, z, y };
     });
-    if (t1Test(worldPp, SEED + 24000 + gap * 100 + k, NC_ITER).p < ALPHA) firedPp++;
+    if (t1Test(worldPp, SEED + 24000 + GAPS.indexOf(gap) * 100 + k, NC_ITER).p < ALPHA) firedPp++;
   }
   battery.t1[gap] = { fired: firedP, ran: NC_REPEATS };
   battery.t1p[gap] = { fired: firedPp, ran: NC_REPEATS };
@@ -592,7 +594,7 @@ for (const gap of GAPS) {
   const units = t2Units(gap);
   let fired2 = 0;
   for (let k = 0; k < NC_REPEATS; k++) {
-    const rng = makeRng(SEED + 25000 + gap * 100 + k);
+    const rng = makeRng(SEED + 25000 + GAPS.indexOf(gap) * 100 + k);
     const world = units.map((u) => ({
       ...u,
       runs: u.runs.map((run) => {
@@ -601,7 +603,7 @@ for (const gap of GAPS) {
         return { ...run, m: mean(ar1(run.n, PHI[gap], sig, rng)) };
       }),
     }));
-    if (t2Test(world, SEED + 26000 + gap * 100 + k, NC_ITER).p < ALPHA) fired2++;
+    if (t2Test(world, SEED + 26000 + GAPS.indexOf(gap) * 100 + k, NC_ITER).p < ALPHA) fired2++;
   }
   battery.t2[gap] = { fired: fired2, ran: NC_REPEATS };
 }
@@ -611,7 +613,7 @@ for (const W of WINDOWS) {
   const recs = t3All.filter((rc) => rc.span >= 2 * W);
   let fired = 0;
   for (let k = 0; k < NC_REPEATS; k++) {
-    const rng = makeRng(SEED + 27000 + W * 100 + k);
+    const rng = makeRng(SEED + 27000 + WINDOWS.indexOf(W) * 100 + k);
     const world = recs.map((rc) => {
       const synth = (side) => {
         const sils = side.map((r) => rc.prevSil.get(r.i));
@@ -658,7 +660,7 @@ for (const W of WINDOWS) {
       return runNull("rotate", 0, seed2) < ALPHA &&
              JITTERS.every((J) => runNull("jitter", J, seed2 + J) < ALPHA);
     };
-    if (t3TestSynth(world, W, SEED + 28000 + W * 100 + k)) fired++;
+    if (t3TestSynth(world, W, SEED + 28000 + WINDOWS.indexOf(W) * 100 + k)) fired++;
   }
   battery.t3[W] = { fired, ran: NC_REPEATS };
 }
@@ -711,9 +713,16 @@ if (!notTested.t1) {
   console.log(`  ${"gap".padEnd(6)}${"frags".padStart(6)}${"mass".padStart(7)}${"partial-r".padStart(11)}` +
               `${"null".padStart(9)}${"z".padStart(7)}${"p".padStart(9)}${"raw(sil)".padStart(10)}${"raw(IOI)".padStart(10)}`);
   for (const gap of GAPS) {
+    if (armNotTested.t1[gap]) {
+      const ch = ncFail.includes(`T1@${gap}`) ? "negative control" : "mass floor";
+      results.t1[gap] = { mass: armMass.t1[gap], tested: false, notTestedChannel: ch };
+      console.log(`  ${(gap + "s").padEnd(6)}${"—".padStart(6)}${String(armMass.t1[gap]).padStart(7)}` +
+                  `   NOT TESTED (${ch}) — not computed, counts neither way`);
+      continue;
+    }
     const frags = t1Fragments(gap);
     const massv = t1Mass(frags);
-    const t = t1Test(frags, SEED + 31000 + gap);
+    const t = t1Test(frags, SEED + 31000 + GAPS.indexOf(gap));
     results.t1[gap] = { fragments: frags.length, mass: massv, ...t,
                         tested: !armNotTested.t1[gap] };
     console.log(`  ${(gap + "s").padEnd(6)}${String(frags.length).padStart(6)}${String(massv).padStart(7)}` +
@@ -733,9 +742,16 @@ if (!notTested.t2) {
   console.log(`  ${"gap".padEnd(6)}${"units".padStart(6)}${"mass".padStart(6)}${"lag1-r".padStart(9)}` +
               `${"null".padStart(9)}${"z".padStart(7)}${"p".padStart(9)}${"sw061%".padStart(8)}${"LODO-p".padStart(9)}`);
   for (const gap of GAPS) {
+    if (armNotTested.t2[gap]) {
+      const ch = ncFail.includes(`T2@${gap}`) ? "negative control" : "mass floor";
+      results.t2[gap] = { mass: armMass.t2[gap], tested: false, notTestedChannel: ch };
+      console.log(`  ${(gap + "s").padEnd(6)}${"—".padStart(6)}${String(armMass.t2[gap]).padStart(6)}` +
+                  `   NOT TESTED (${ch}) — not computed, counts neither way`);
+      continue;
+    }
     const units = t2Units(gap);
     const massv = t2Mass(units);
-    const t = t2Test(units, SEED + 32000 + gap);
+    const t = t2Test(units, SEED + 32000 + GAPS.indexOf(gap));
     // registered reports: separations, own-codas-inside, scene composition, concentration, LODO
     const seps = [], own = [], scene = [];
     const byRecAll = new Map();
@@ -754,7 +770,7 @@ if (!notTested.t2) {
     for (const dep of depMass.keys()) {
       const sub = units.filter((u) => u.deployment !== dep);
       if (t2Mass(sub) < MASS_FLOOR || sub.length === 0) { lodoBelowFloor.push(dep); continue; }
-      const ts = t2Test(sub, SEED + 33000 + gap, 1000);
+      const ts = t2Test(sub, SEED + 33000 + GAPS.indexOf(gap), 1000);
       if (!lodo || ts.p > lodo.p) lodo = { dep, p: ts.p, mass: t2Mass(sub) };
     }
     if (lodo) lodo.belowFloorDeps = lodoBelowFloor;
@@ -773,8 +789,20 @@ if (!notTested.t2) {
   }
   const tested2 = GAPS.filter((g) => results.t2[g].tested);
   results.t2.survives = tested2.length > 0 && tested2.every((g) => results.t2[g].p < ALPHA);
+  // Statistic-level registered qualifiers — retained in EVERY configuration,
+  // including no-row ones (round-4 scope clause).
+  {
+    const firedArms = tested2.filter((g) => results.t2[g].p < ALPHA);
+    const lodoLoses = firedArms.some((g) => results.t2[g].lodoWorst &&
+      Number.isFinite(results.t2[g].lodoWorst.p) && results.t2[g].lodoWorst.p >= ALPHA);
+    results.t2.qualifiers = { firedArms, lodoLoses };
+    if (firedArms.length && lodoLoses) {
+      console.log(`  QUALIFIER (registered): concentrated in one annotation scene — consistent with ` +
+                  `block-wise attribution error as well as state; the state reading is not licensed at full strength`);
+    }
+  }
   console.log(`  T2 ${results.t2.survives ? "SURVIVES (all tested arms)" : "does not survive"}` +
-              `   (beyond-exchange reading requires the 30s arm: ${results.t2[30]?.p < ALPHA ? "fired" : "did not fire"})`);
+              `   (beyond-exchange reading requires the 30s arm: ${!results.t2[30] || !results.t2[30].tested ? "NOT TESTED — reading not licensed" : results.t2[30].p < ALPHA ? "fired" : "did not fire"})`);
   console.log();
 }
 
@@ -786,7 +814,20 @@ if (!notTested.t3) {
   const armIds = {};
   for (const W of WINDOWS) {
     const recs = t3All.filter((rc) => rc.span >= 2 * W);
-    const t = t3Test(recs, W, SEED + 34000 + W);
+    if (armNotTested.t3[W]) {
+      const ch = ncFail.includes(`T3@${W}`) ? "negative control" : "mass floor";
+      const idsNT = new Set();
+      for (const rc of recs) {
+        const tsA = rc.A.map((r) => r.ts), tsB = rc.B.map((r) => r.ts);
+        for (const [ia, ib] of derivePairs(rc.A, tsA, rc.B, tsB, W)) idsNT.add(`${rc.A[ia].i}|${rc.B[ib].i}`);
+      }
+      armIds[W] = idsNT;
+      results.t3[W] = { recordings: recs.length, n: armMass.t3[W], tested: false, notTestedChannel: ch };
+      console.log(`  ${(W + "s").padEnd(5)}${String(recs.length).padStart(5)}${String(armMass.t3[W]).padStart(7)}` +
+                  `   NOT TESTED (${ch}) — not computed, counts neither way`);
+      continue;
+    }
+    const t = t3Test(recs, W, SEED + 34000 + WINDOWS.indexOf(W));
     // overlap share, deployment shares, and pair ids on the observed pairing
     let nOv = 0, nAll = 0;
     const depPairs = new Map(); const idsHere = new Set();
@@ -804,7 +845,7 @@ if (!notTested.t3) {
     // registered diagnostic: partial correlation controlling own preceding silence
     const diag = t3PartialDiag(recs, W);
     // composition-constant profile arm (fixed W=30-eligible recording set)
-    const cc = t3Test(t3All.filter((rc) => w30set.has(rc.rec)), W, SEED + 35000 + W, "all", 1000);
+    const cc = t3Test(t3All.filter((rc) => w30set.has(rc.rec)), W, SEED + 35000 + WINDOWS.indexOf(W), "all", 1000);
     results.t3[W] = { recordings: recs.length, ...t, overlapShare: nOv / nAll,
                       deploymentLeaders: leaders.slice(0, 5),
                       partialControllingOwnSilence: diag,
@@ -827,6 +868,16 @@ if (!notTested.t3) {
               `${fmt(100 * results.t3.sharedPairFraction.w5inW30, 1)}% at W=30`);
   const prim = results.t3[PRIMARY_W];
   results.t3.survives = prim.tested && prim.fires;
+  // Registered pre-assigned reading for a rotation-only positive at the
+  // primary arm, with the retention shares printed beside it (bio-r5-02).
+  results.t3.rotationOnly = prim.tested && !prim.fires && prim.rotation.p < ALPHA;
+  if (results.t3.rotationOnly) {
+    console.log(`  PRE-ASSIGNED READING (registered): fires under rotation but not under jitter — ` +
+                `"co-activity plus private state, or fine alignment below the co-null's discrimination ` +
+                `at the reported retention; no evidence of tempo concurrence at that discrimination" ` +
+                `[retention rot ${fmt(100 * prim.rotation.retention, 1)}% / ` +
+                `J2 ${fmt(100 * prim.jitter[2].retention, 1)}% / J5 ${fmt(100 * prim.jitter[5].retention, 1)}%]`);
+  }
   // stability on the non-overlapping stratum (pinned sense) — only meaning-bearing
   // on a surviving fire, computed regardless for the record
   const recs5 = t3All.filter((rc) => rc.span >= 2 * PRIMARY_W);
@@ -845,31 +896,135 @@ if (!notTested.t3) {
 // --- verdict + artifacts -----------------------------------------------------
 rule();
 const state = (s) => notTested[s] ? "NOT TESTED" : (results[s].survives ? "fires" : "null");
-// T1 direction (registered: sign outcomes are read separately; a negative
-// survival is NOT the registered "fires positive" prediction)
-let t1Verdict = state("t1");
-if (t1Verdict === "fires") {
-  const g0 = GAPS.find((g) => results.t1[g].tested);
-  t1Verdict = Math.sign(results.t1[g0].observed) > 0 ? "fires positive" : "fires negative";
+
+// T1 state classification — the registered five states; partial fires get the
+// registered arm-pattern reading with its precedence rule.
+function classifyT1() {
+  if (notTested.t1) return { state: "NOT TESTED" };
+  const tested = GAPS.filter((g) => results.t1[g]?.tested);
+  const fired = tested.filter((g) => results.t1[g].p < ALPHA);
+  const firedSigns = new Set(fired.map((g) => Math.sign(results.t1[g].observed)));
+  if (results.t1.survives) {
+    const sign = Math.sign(results.t1[tested[0]].observed);
+    return { state: sign > 0 ? "survives-positive" : "survives-negative", firedArms: fired };
+  }
+  if (fired.length === 0 || firedSigns.size > 1) return { state: "null-or-mixed", firedArms: fired };
+  // sign-consistent partial fire: classify against the three registered patterns
+  const testedSorted = [...tested].sort((a, b) => a - b);
+  const wideFired = fired.includes(30);
+  const narrowOnly = fired.every((g) => g <= 5);
+  const suffix = testedSorted.slice(testedSorted.length - fired.length);
+  const isWideSuffix = wideFired && suffix.every((g) => fired.includes(g));
+  let monotone = true;
+  for (let j = 1; j < testedSorted.length; j++) {
+    if (Math.abs(results.t1[testedSorted[j]].observed) + 1e-12 <
+        Math.abs(results.t1[testedSorted[j - 1]].observed)) monotone = false;
+  }
+  let pattern;
+  if (isWideSuffix && monotone) {
+    pattern = "truncation-consistent: wide-arm fires with |r| attenuating monotonically as GAP " +
+      "shrinks — registered as consistent with a real coupling at timescales the narrow arms " +
+      "truncate away; does not survive, and is reported as this pattern, not as a cut artifact";
+  } else if (narrowOnly) {
+    pattern = "narrow-edge-only (GAP 3-5, no wide-arm support): registered signature of residual " +
+      "null miscalibration on short-fragment geometry — triggers re-examination of the placebo " +
+      "battery at those arms; licenses no coupling reading";
+  } else {
+    pattern = "generic cut-dependence (matches none of the three registered arm-patterns)";
+  }
+  return { state: "partial-fire", firedArms: fired, pattern };
 }
+const t1Class = classifyT1();
+const t1Verdict = { "NOT TESTED": "NOT TESTED", "survives-positive": "fires positive",
+                    "survives-negative": "fires negative", "null-or-mixed": "null",
+                    "partial-fire": "partial fire (does not survive)" }[t1Class.state];
+
+// Registered reading-matrix machinery: row selection, row-3 sub-cases (a)-(d),
+// the (a)-only stamp, and the reading qualifiers.
+function readMatrix() {
+  const out = { row: null, rowLabel: "", subcases: [], stamps: [], notes: [], t1: t1Class };
+  if (!notTested.t3 && results.t3.survives) {
+    out.row = 2; out.rowLabel = `row 2 (T3 fires; T2 ${state("t2")})`;
+    if (results.t3.nonOverlapStratum.stable) {
+      out.notes.push("stable on the non-overlapping stratum (pinned sense): shared driver or " +
+        "interaction, undecidable here; no communication claim licensed");
+    } else {
+      out.notes.push("NOT stable on the non-overlapping stratum: two generators this corpus " +
+        "cannot separate (split same-whale train / genuine chorus-confined imitation); licenses " +
+        "neither concurrence nor a reduction of the published sub-claim to artifact");
+    }
+    return out;
+  }
+  if (notTested.t3) {
+    out.rowLabel = "no matrix row selectable — T3 NOT TESTED; machinery-only report per the propagation rule";
+    return out;
+  }
+  if (notTested.t2) {
+    out.rowLabel = "no matrix row selectable — T2 NOT TESTED with T3 null; machinery-only report per the propagation rule";
+    return out;
+  }
+  if (results.t2.survives) {
+    out.row = 1; out.rowLabel = "row 1 (T2 fires, T3 null) — beyond-gap persistence, no detectable concurrence at the reported sensitivity: state-flavored";
+    const arm30 = results.t2[30];
+    out.notes.push(arm30?.tested && arm30.p < ALPHA
+      ? "GAP-30 fired: the session-scale reading is licensed"
+      : "GAP-30 did not fire or is NOT TESTED: 'session-scale' is NOT licensed");
+    if (results.t2.qualifiers?.lodoLoses) out.notes.push("LODO qualifier applies: concentrated in one annotation scene — " +
+      "consistent with block-wise attribution error as well as state; the state reading is not licensed at full strength");
+    return out;
+  }
+  // row 3: T2 tested-null, T3 tested-null (partial fires land here)
+  out.row = 3; out.rowLabel = "row 3 (T2 null, T3 null)";
+  const t2tested = GAPS.filter((g) => results.t2[g]?.tested);
+  const t2fired = t2tested.filter((g) => results.t2[g].p < ALPHA);
+  if (t2fired.length > 0) {
+    out.subcases.push(`(b) T2 partial fire at {${t2fired.join(", ")}s}: scale-limited persistence at the fired arms; ` +
+      "persistence is not established beyond the widest fired gap, a thin-arm miss is a non-detection " +
+      "there, and 'local to the exchange' may not be asserted");
+  }
+  if (t1Class.state === "survives-positive") {
+    out.subcases.push("(c) T1 surviving positive: a pacing-state signature exists but is exchange-local — " +
+      "evidence against the beyond-exchange state predictions specifically, not against state; no signal claim");
+  } else if (t1Class.state === "survives-negative") {
+    out.subcases.push("(d) T1 surviving negative: compensatory / isochronous motor timing, exchange-local — " +
+      "'evidence against the pacing-state prediction' may be stated; 'maximally signal-compatible' may not");
+  } else if (t1Class.state === "partial-fire") {
+    out.subcases.push(`T1 partial fire — no sub-case stamp; registered narrative label: ${t1Class.pattern}`);
+  } else if (t1Class.state === "NOT TESTED") {
+    out.notes.push("T1 NOT TESTED: T1-keyed sub-case labels (a)/(c)/(d) stripped; row reported beside the null-machinery finding");
+  }
+  if (t2fired.length === 0 && t1Class.state === "null-or-mixed") {
+    out.subcases.push("(a) clean null: drift is local to the exchange and not detectably shared");
+    out.stamps.push("maximally signal-compatible outcome; evidence against the state predictions " +
+      "made here — and still licensing no signal claim: unexplained is not signal");
+  }
+  return out;
+}
+const matrix = readMatrix();
+if (!notTested.t3 && results.t3.rotationOnly) {
+  const prim = results.t3[PRIMARY_W];
+  matrix.notes.push("rotation-only positive at the primary arm: the registered pre-assigned reading " +
+    "applies — 'co-activity plus private state, or fine alignment below the co-null's discrimination " +
+    `at the reported retention' [retention rot ${fmt(100 * prim.rotation.retention, 1)}% / ` +
+    `J2 ${fmt(100 * prim.jitter[2].retention, 1)}% / J5 ${fmt(100 * prim.jitter[5].retention, 1)}%]`);
+}
+results.matrix = matrix;
+
 console.log(`  T1: ${t1Verdict}   T2: ${state("t2")}   T3: ${state("t3")}`);
-// Matrix-row selection under the registered NOT TESTED propagation: rows 1 and
-// 3 need tested T2 AND T3; row 2 needs T3 fires (its T2 column is "any").
-let rowMsg;
-if (!notTested.t3 && results.t3.survives) rowMsg = `row 2 (T3 fires; T2 ${state("t2")})`;
-else if (notTested.t3) rowMsg = "no matrix row selectable — T3 NOT TESTED; machinery-only report per the propagation rule";
-else if (notTested.t2) rowMsg = "no matrix row selectable — T2 NOT TESTED with T3 null; machinery-only report per the propagation rule";
-else rowMsg = results.t2.survives ? "row 1 (T2 fires, T3 null)" : "row 3 (T2 null, T3 null)";
-console.log(`  matrix: ${rowMsg}`);
+console.log(`  matrix: ${matrix.rowLabel}`);
+for (const sc of matrix.subcases) console.log(`    sub-case ${sc}`);
+for (const st of matrix.stamps) console.log(`    STAMP: ${st}`);
+for (const nt of matrix.notes) console.log(`    note: ${nt}`);
 // Prediction scoring (registered: NOT TESTED predictions are unevaluated;
 // clause (ii) is conditional on a surviving T3)
 const score1 = notTested.t1 ? "unevaluated (NOT TESTED)"
-  : t1Verdict === "fires positive" ? "hit" : "miss";
+  : t1Class.state === "survives-positive" ? "hit" : "miss";
 const score2 = notTested.t2 ? "unevaluated (NOT TESTED)" : results.t2.survives ? "hit" : "miss";
 const score3i = notTested.t3 ? "unevaluated (NOT TESTED)" : results.t3.survives ? "miss" : "hit";
 const score3ii = notTested.t3 ? "unevaluated (NOT TESTED)"
   : !results.t3.survives ? "unevaluated (conditional on a surviving T3)"
   : results.t3.nonOverlapStratum.stable ? "miss" : "hit";
+results.predictions = { t1: score1, t2: score2, t3i: score3i, t3ii: score3ii };
 console.log(`  predictions: T1 fires-positive-sign-consistent — ${score1}; T2 fires — ${score2};`);
 console.log(`               T3(i) no survival — ${score3i}; T3(ii) any fire unstable off-overlap — ${score3ii}`);
 rule();
