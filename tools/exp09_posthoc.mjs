@@ -1,11 +1,22 @@
-// exp09_posthoc.mjs — robustness diagnostics for exp09's S2b survival.
+// exp09_posthoc.mjs — post-hoc diagnostics for experiment 09. NOT pre-registered.
 //
 //     node tools/exp09_posthoc.mjs
 //
-// NOT pre-registered. Run after the registered sweep falsified the rubato half
-// of the prediction, to check whether the pooled within-class autocorrelation
-// is broad-based or carried by a few fragments, one recording, or the majority
-// class. Duplicates the main tool's run construction on purpose: a bug shared
+// Two clearly-flagged post-hoc sections:
+//
+// 1. Robustness of S2b's survival (run after the sweep falsified the rubato
+//    half of the prediction): is the pooled within-class autocorrelation
+//    broad-based, or carried by a few fragments, one recording, or the
+//    majority class?
+//
+// 2. Positional arms the registration did NOT cover. Sharma et al. 2024 claim
+//    ornaments occur disproportionately at sequence BEGINNINGS (Fisher OR
+//    2.00) and ends (OR 1.71); registered S1 tested finals only. These arms
+//    test initial vs non-initial (runs >= 2) and edge vs interior (runs >= 3)
+//    with the same within-class stratified null. Post-hoc means: reported,
+//    never promoted to a registered result.
+//
+// Duplicates the main tool's run construction on purpose: a bug shared
 // through an import would replicate here invisibly.
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
@@ -137,4 +148,76 @@ for (const gap of [3, 10]) {
   const d2 = fs.flat().filter((r) => r.cls === 2).map((r) => r.dur);
   const m2 = mean(d2), s2 = Math.sqrt(mean(d2.map((v) => (v - m2) ** 2)));
   console.log(`  class-2 duration: mean ${m2.toFixed(3)}s  sd ${s2.toFixed(3)}s  cv ${(s2 / m2).toFixed(3)}`);
+}
+
+// ---------------------------------------------------------------------------
+// POST-HOC POSITIONAL ARMS (section 2 of the header): initial and edge.
+// Same universe as registered S1 (runs on the full post-G0 timeline; class-17
+// and zero-duration codas occupy positions but contribute no observations),
+// same within-class stratified null, two-sided p. Post-hoc, clearly flagged.
+function runsOf(gap) {
+  const bySpk = new Map();
+  for (const r of rows) {
+    const k = `${r.rec}|${r.whale}`;
+    if (!bySpk.has(k)) bySpk.set(k, []);
+    bySpk.get(k).push(r);
+  }
+  const runs = [];
+  for (const [, rs] of bySpk) {
+    rs.sort((a, b) => a.ts - b.ts || a.i - b.i);
+    let cur = [rs[0]];
+    for (let j = 1; j < rs.length; j++) {
+      if (rs[j].ts - (rs[j - 1].ts + rs[j - 1].dur) > gap) { runs.push(cur); cur = [rs[j]]; }
+      else cur.push(rs[j]);
+    }
+    runs.push(cur);
+  }
+  return runs;
+}
+function positionTest(gap, minRun, inGroup, label, seed) {
+  const A = [], B = []; // in-group, out-group observations
+  for (const run of runsOf(gap)) {
+    if (run.length < minRun) continue;
+    run.forEach((r, j) => {
+      if (!observable(r)) return;
+      (inGroup(j, run.length) ? A : B).push(r);
+    });
+  }
+  const obs = mean(A.map((r) => r.orn)) - mean(B.map((r) => r.orn));
+  // within-class flag shuffle across all observations, positions fixed
+  const pool = [...A.map((r) => ({ ...r, g: 0 })), ...B.map((r) => ({ ...r, g: 1 }))];
+  const byCls = new Map();
+  pool.forEach((r, k) => { if (!byCls.has(r.cls)) byCls.set(r.cls, []); byCls.get(r.cls).push(k); });
+  const flags = pool.map((r) => r.orn);
+  const rng = makeRng(seed);
+  const dist = [];
+  for (let it = 0; it < 2000; it++) {
+    for (const idx of byCls.values()) {
+      for (let a = idx.length - 1; a > 0; a--) {
+        const b = (rng() * (a + 1)) | 0;
+        const t = flags[idx[a]]; flags[idx[a]] = flags[idx[b]]; flags[idx[b]] = t;
+      }
+    }
+    let sA = 0, nA = 0, sB = 0, nB = 0;
+    pool.forEach((r, k) => { if (r.g === 0) { sA += flags[k]; nA++; } else { sB += flags[k]; nB++; } });
+    dist.push(sA / nA - sB / nB);
+  }
+  const m = mean(dist), s = Math.sqrt(mean(dist.map((v) => (v - m) ** 2)));
+  const pG = (dist.filter((v) => v >= obs).length + 1) / (dist.length + 1);
+  const pL = (dist.filter((v) => v <= obs).length + 1) / (dist.length + 1);
+  const p = Math.min(1, 2 * Math.min(pG, pL));
+  console.log(`  ${label.padEnd(9)} GAP ${String(gap).padStart(2)}s: ` +
+              `n=${String(A.length).padStart(4)}/${String(B.length).padStart(4)}  ` +
+              `delta=${obs.toFixed(4).padStart(8)}  null=${m.toFixed(4).padStart(8)}  ` +
+              `z=${((obs - m) / s).toFixed(1).padStart(5)}  p=${p.toFixed(4)}${p < 0.05 ? " *" : ""}`);
+}
+console.log("\n=== POST-HOC positional arms (stratified null; NOT registered) ===");
+console.log("  Sharma et al. claim ornaments at beginnings (OR 2.00) and ends (OR 1.71);");
+console.log("  registered S1 tested finals only. delta = P(orn|in-group) - P(orn|out-group).");
+for (const gap of [3, 5, 10, 15, 30]) {
+  positionTest(gap, 2, (j) => j === 0, "initial", 909 + gap);
+}
+console.log();
+for (const gap of [3, 5, 10, 15, 30]) {
+  positionTest(gap, 3, (j, L) => j === 0 || j === L - 1, "edge", 1909 + gap);
 }
